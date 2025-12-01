@@ -15,14 +15,14 @@ const DocumentsPage = () => {
   const create = useMutation(api.documents.create);
 
   const onCreate = () => {
-    const promise = create({ title: "Untitled" }).then((documentId) =>
+    const promise = create({ title: "Không có tiêu đề" }).then((documentId) =>
       router.push(`/documents/${documentId}`)
     );
 
     toast.promise(promise, {
-      loading: "Creating a new note...",
-      success: "New note created!",
-      error: "Failed to create a new not.",
+      loading: "Đang tạo ghi chú mới...",
+      success: "Đã tạo ghi chú mới!",
+      error: "Không thể tạo ghi chú mới.",
     });
   };
 
@@ -43,11 +43,11 @@ const DocumentsPage = () => {
         className="hidden dark:block"
       />
       <h2 className="text-lg font-medium">
-        Welcome to {user?.firstName}&apos;s Notion
+        Chào mừng đến với PLMS của {user?.firstName}
       </h2>
       <Button onClick={onCreate}>
         <PlusCircle className="h-4 w-4 mr-2" />
-        Create a note
+        Tạo ghi chú
       </Button>
     </div>
   );

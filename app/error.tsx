@@ -21,9 +21,9 @@ const Error = () => {
         alt="Error"
         className="hidden dark:block"
       />
-      <h2 className="text-xl font-medium">Something went wrong!</h2>
+      <h2 className="text-xl font-medium">Đã xảy ra lỗi!</h2>
       <Button asChild>
-        <Link href="/documents">Go back</Link>
+        <Link href="/documents">Quay lại</Link>
       </Button>
     </div>
   );

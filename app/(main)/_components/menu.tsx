@@ -31,9 +31,9 @@ export const Menu = ({ documentId }: MenuProps) => {
     const promise = archive({ id: documentId });
 
     toast.promise(promise, {
-      loading: "Moving to trash...",
-      success: "Note moved to trash!",
-      error: "Failed to archive note.",
+      loading: "Đang chuyển vào thùng rác...",
+      success: "Đã chuyển ghi chú vào thùng rác!",
+      error: "Không thể lưu trữ ghi chú.",
     });
 
     router.push("/documents");
@@ -54,11 +54,11 @@ export const Menu = ({ documentId }: MenuProps) => {
       >
         <DropdownMenuItem onClick={onArchive}>
           <Trash className="h-4 w-4 mr-2" />
-          Delete
+          Xóa
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <div className="text-xs text-muted-foreground p-2">
-          Last edited by: {user?.fullName}
+          Chỉnh sửa lần cuối bởi: {user?.fullName}
         </div>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -13,12 +13,12 @@ export const Heading = () => {
   return (
     <div className="max-w-3xl space-y-4">
       <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold">
-        Your Ideas, Documents, & Plans. Unified. Welcome to{" "}
-        <span className="underline">Notion</span>
+        Ý tưởng, Tài liệu & Kế hoạch của bạn. Được hợp nhất. Chào mừng đến với{" "}
+        <span className="underline">PLMS</span>
       </h1>
       <h3 className="text-base sm:text-xl md:text-2xl font-medium">
-        Notion is the connected workspace where <br />
-        better, faster work happens.
+        PLMS là không gian làm việc kết nối nơi <br />
+        công việc tốt hơn, nhanh hơn được thực hiện.
       </h3>
       {isLoading && (
         <div className="w-full flex items-center justify-center">
@@ -28,14 +28,14 @@ export const Heading = () => {
       {isAuthenticated && !isLoading && (
         <Button asChild>
           <Link href="/documents">
-            Enter Notion <ArrowRight className="h-4 w-4 ml-2" />
+            Vào PLMS <ArrowRight className="h-4 w-4 ml-2" />
           </Link>
         </Button>
       )}
       {!isAuthenticated && !isLoading && (
         <SignInButton mode="modal">
           <Button>
-            Get Notion free <ArrowRight className="h-4 w-4 ml-2" />
+            Dùng PLMS miễn phí <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </SignInButton>
       )}

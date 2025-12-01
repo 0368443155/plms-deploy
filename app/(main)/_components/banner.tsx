@@ -21,9 +21,9 @@ export const Banner = ({ documentId }: BannerProps) => {
   const onRemove = () => {
     const promise = remove({ id: documentId });
     toast.promise(promise, {
-      loading: "Deleting note...",
-      success: "Note deleted!",
-      error: "Failed to delete note.",
+      loading: "Đang xóa ghi chú...",
+      success: "Đã xóa ghi chú!",
+      error: "Không thể xóa ghi chú.",
     });
     router.push("/documents");
   };
@@ -31,22 +31,22 @@ export const Banner = ({ documentId }: BannerProps) => {
   const onRestore = () => {
     const promise = restore({ id: documentId });
     toast.promise(promise, {
-      loading: "Restoring note...",
-      success: "Note restored!",
-      error: "Failed to restore note.",
+      loading: "Đang khôi phục ghi chú...",
+      success: "Đã khôi phục ghi chú!",
+      error: "Không thể khôi phục ghi chú.",
     });
   };
 
   return (
     <div className="w-full bg-rose-500 text-center text-sm p-2 text-white flex items-center gap-x-2 justify-center">
-      <p>This page is in the trash</p>
+      <p>Trang này đang ở trong thùng rác</p>
       <Button
         size="sm"
         onClick={onRestore}
         variant="outline"
         className="border-white bg-transparent hover:bg-primary/5 text-white hover:text-white p-1 px-2 h-auto font-normal"
       >
-        Restore page
+        Khôi phục trang
       </Button>
       <ConfirmModal onConfirm={onRemove}>
         <Button
@@ -54,7 +54,7 @@ export const Banner = ({ documentId }: BannerProps) => {
           variant="outline"
           className="border-white bg-transparent hover:bg-primary/5 text-white hover:text-white p-1 px-2 h-auto font-normal"
         >
-          Delete forever
+          Xóa vĩnh viễn
         </Button>
       </ConfirmModal>
     </div>

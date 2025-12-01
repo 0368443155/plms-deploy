@@ -16,7 +16,7 @@ export const Title = ({ initialData }: TitleProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const update = useMutation(api.documents.update);
 
-  const [title, setTitle] = useState(initialData.title || "Untitled");
+  const [title, setTitle] = useState(initialData.title || "Không có tiêu đề");
   const [isEditing, setIsEditing] = useState(false);
 
   const enableInput = () => {
@@ -34,7 +34,7 @@ export const Title = ({ initialData }: TitleProps) => {
 
   const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(event.target.value);
-    update({ id: initialData._id, title: event.target.value || "Untitled" });
+    update({ id: initialData._id, title: event.target.value || "Không có tiêu đề" });
   };
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {

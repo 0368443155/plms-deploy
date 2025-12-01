@@ -28,18 +28,18 @@ export const Navbar = () => {
           <>
             <SignInButton mode="modal">
               <Button variant="ghost" size="sm">
-                Log in
+                Đăng nhập
               </Button>
             </SignInButton>
             <SignInButton mode="modal">
-              <Button size="sm">Get Notion free</Button>
+              <Button size="sm">Dùng PLMS miễn phí</Button>
             </SignInButton>
           </>
         )}
         {isAuthenticated && !isLoading && (
           <>
             <Button variant="default" size="sm" asChild>
-              <Link href="/documents">Enter Notion</Link>
+              <Link href="/documents">Vào PLMS</Link>
             </Button>
             <UserButton afterSignOutUrl="/" />
           </>

@@ -52,10 +52,10 @@ export const SearchCommand = () => {
 
   return (
     <CommandDialog open={isOpen} onOpenChange={onClose}>
-      <CommandInput placeholder={`Search ${user?.fullName}'s Notion...`} />
+      <CommandInput placeholder={`Tìm kiếm PLMS của ${user?.fullName}...`} />
       <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
-        <CommandGroup heading="Documents">
+        <CommandEmpty>Không tìm thấy kết quả.</CommandEmpty>
+        <CommandGroup heading="Tài liệu">
           {documents?.map((document) => (
             <CommandItem
               key={document._id}

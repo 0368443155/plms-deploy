@@ -10,7 +10,7 @@ import { EdgeStoreProvider } from "@/lib/edgestore";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Notion Clone",
+  title: "PLMS",
   description: "The connected workspace where better, faster work happens.",
   icons: {
     icon: [
@@ -43,7 +43,7 @@ export default function RootLayout({
               defaultTheme="system"
               enableSystem
               disableTransitionOnChange
-              storageKey="notion-theme"
+              storageKey="plms-theme"
             >
               <Toaster position="bottom-center" />
               <ModalProvider />

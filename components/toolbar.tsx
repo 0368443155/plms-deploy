@@ -40,7 +40,7 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
     setValue(value);
     update({
       id: initialData._id,
-      title: value || "Untitled",
+      title: value || "Không có tiêu đề",
     });
   };
 
@@ -95,7 +95,7 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
               size="sm"
             >
               <Smile className="h-4 w-4 mr-2" />
-              Add icon
+              Thêm biểu tượng
             </Button>
           </IconPicker>
         )}
@@ -107,7 +107,7 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
             size="sm"
           >
             <ImageIcon className="h-4 w-4 mr-2" />
-            Add cover
+            Thêm ảnh bìa
           </Button>
         )}
       </div>

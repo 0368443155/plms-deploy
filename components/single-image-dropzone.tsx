@@ -29,16 +29,16 @@ type InputProps = {
 
 const ERROR_MESSAGES = {
   fileTooLarge(maxSize: number) {
-    return `The file is too large. Max size is ${formatFileSize(maxSize)}.`;
+    return `Tệp quá lớn. Kích thước tối đa là ${formatFileSize(maxSize)}.`;
   },
   fileInvalidType() {
-    return "Invalid file type.";
+    return "Loại tệp không hợp lệ.";
   },
   tooManyFiles(maxFiles: number) {
-    return `You can only add ${maxFiles} file(s).`;
+    return `Bạn chỉ có thể thêm ${maxFiles} tệp.`;
   },
   fileNotSupported() {
-    return "The file is not supported.";
+    return "Tệp không được hỗ trợ.";
   },
 };
 
@@ -151,7 +151,7 @@ const SingleImageDropzone = React.forwardRef<HTMLInputElement, InputProps>(
             <div className="flex flex-col items-center justify-center text-xs text-gray-400">
               <UploadCloudIcon className="mb-2 h-7 w-7" />
               <div className="text-gray-400">
-                Click or drag file to this area to upload
+                Nhấp hoặc kéo thả tệp vào đây để tải lên
               </div>
             </div>
           )}

@@ -61,9 +61,9 @@ export const Item = ({
 
     const promise = archive({ id }).then(() => router.push("/documents"));
     toast.promise(promise, {
-      loading: "Moving to trash...",
-      success: "Note moved to trash!",
-      error: "Failed to archive note.",
+      loading: "Đang chuyển vào thùng rác...",
+      success: "Đã chuyển ghi chú vào thùng rác!",
+      error: "Không thể lưu trữ ghi chú.",
     });
   };
 
@@ -78,7 +78,7 @@ export const Item = ({
   const onCreate = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     event.stopPropagation();
     if (!id) return; // if there is no id, break the function
-    const promise = create({ title: "Untitled", parentDocument: id }).then(
+    const promise = create({ title: "Không có tiêu đề", parentDocument: id }).then(
       (documentId) => {
         // if the document is not expanded, expand it to show the newly created child document
         if (!expanded) {
@@ -89,9 +89,9 @@ export const Item = ({
     );
 
     toast.promise(promise, {
-      loading: "Creating a new note...",
-      success: "New note created!",
-      error: "Failed to create a new note.",
+      loading: "Đang tạo ghi chú mới...",
+      success: "Đã tạo ghi chú mới!",
+      error: "Không thể tạo ghi chú mới.",
     });
   };
 
@@ -150,11 +150,11 @@ export const Item = ({
             >
               <DropdownMenuItem onClick={onArchive}>
                 <Trash className="h-4 w-4 mr-2" />
-                Delete
+                Xóa
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <div className="text-xs text-muted-foreground p-2">
-                Last edited by: {user?.fullName}
+                Chỉnh sửa lần cuối bởi: {user?.fullName}
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
