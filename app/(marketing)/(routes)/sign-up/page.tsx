@@ -229,7 +229,9 @@ export default function SignUpPage() {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
                   <>
-                    <Spinner className="mr-2 h-4 w-4" />
+                    <span className="mr-2">
+                      <Spinner size="sm" />
+                    </span>
                     Đang tạo tài khoản...
                   </>
                 ) : (
@@ -271,7 +273,9 @@ export default function SignUpPage() {
                 <Button type="submit" className="flex-1" disabled={isLoading}>
                   {isLoading ? (
                     <>
-                      <Spinner className="mr-2 h-4 w-4" />
+                      <span className="mr-2">
+                        <Spinner size="sm" />
+                      </span>
                       Đang xác thực...
                     </>
                   ) : (

@@ -119,7 +119,9 @@ export default function ForgotPasswordPage() {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
                   <>
-                    <Spinner className="mr-2 h-4 w-4" />
+                    <span className="mr-2">
+                      <Spinner size="sm" />
+                    </span>
                     Đang gửi...
                   </>
                 ) : (
@@ -159,7 +161,9 @@ export default function ForgotPasswordPage() {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
                   <>
-                    <Spinner className="mr-2 h-4 w-4" />
+                    <span className="mr-2">
+                      <Spinner size="sm" />
+                    </span>
                     Đang đặt lại...
                   </>
                 ) : (
