@@ -121,7 +121,29 @@ export default function SignInPage() {
         message: err?.message,
         status: err?.status,
       });
-      const errorMessage = err?.errors?.[0]?.longMessage || err?.message || "Đăng nhập thất bại. Vui lòng thử lại.";
+      
+      // Xử lý error theo đặc tả UC01
+      const errorCode = err?.errors?.[0]?.code;
+      let errorMessage = "Đăng nhập thất bại. Vui lòng thử lại.";
+      
+      switch (errorCode) {
+        case "form_identifier_not_found":
+          errorMessage = "Không tìm thấy tài khoản. Vui lòng kiểm tra lại email.";
+          break;
+        case "form_password_incorrect":
+          errorMessage = "Mật khẩu không đúng. Vui lòng thử lại.";
+          break;
+        case "session_exists":
+          // Đã đăng nhập rồi, redirect
+          router.push("/documents");
+          return;
+        case "rate_limit_exceeded":
+          errorMessage = "Quá nhiều lần thử. Vui lòng thử lại sau 30 phút.";
+          break;
+        default:
+          errorMessage = err?.errors?.[0]?.longMessage || err?.message || errorMessage;
+      }
+      
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -150,8 +172,22 @@ export default function SignInPage() {
         toast.error("Mã xác thực không đúng. Vui lòng thử lại.");
       }
     } catch (err: any) {
-      console.error("Error:", err);
-      const errorMessage = err?.errors?.[0]?.longMessage || err?.message || "Xác thực thất bại. Vui lòng thử lại.";
+      console.error("Verification error:", err);
+      
+      const errorCode = err?.errors?.[0]?.code;
+      let errorMessage = "Xác thực thất bại. Vui lòng thử lại.";
+      
+      switch (errorCode) {
+        case "form_code_incorrect":
+          errorMessage = "Mã xác thực không đúng. Vui lòng thử lại.";
+          break;
+        case "form_code_expired":
+          errorMessage = "Mã xác thực đã hết hạn. Vui lòng yêu cầu mã mới.";
+          break;
+        default:
+          errorMessage = err?.errors?.[0]?.longMessage || err?.message || errorMessage;
+      }
+      
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);

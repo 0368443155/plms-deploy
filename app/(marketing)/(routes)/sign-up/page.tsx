@@ -87,8 +87,32 @@ export default function SignUpPage() {
         }
       }
     } catch (err: any) {
-      console.error("Error:", err);
-      const errorMessage = err?.errors?.[0]?.longMessage || err?.message || "Đăng ký thất bại. Vui lòng thử lại.";
+      console.error("Sign up error:", err);
+      
+      // Xử lý error theo đặc tả UC02
+      const errorCode = err?.errors?.[0]?.code;
+      let errorMessage = "Đăng ký thất bại. Vui lòng thử lại.";
+      
+      switch (errorCode) {
+        case "form_identifier_exists":
+          errorMessage = "Email này đã được đăng ký. Vui lòng đăng nhập hoặc sử dụng email khác.";
+          break;
+        case "form_password_pwned":
+          errorMessage = "Mật khẩu này đã bị rò rỉ. Vui lòng sử dụng mật khẩu khác.";
+          break;
+        case "form_param_format_invalid":
+          errorMessage = "Email không hợp lệ. Vui lòng kiểm tra lại.";
+          break;
+        case "form_password_length_too_short":
+          errorMessage = "Mật khẩu phải có ít nhất 8 ký tự.";
+          break;
+        case "rate_limit_exceeded":
+          errorMessage = "Quá nhiều lần thử. Vui lòng thử lại sau 1 giờ.";
+          break;
+        default:
+          errorMessage = err?.errors?.[0]?.longMessage || err?.message || errorMessage;
+      }
+      
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -116,8 +140,22 @@ export default function SignUpPage() {
         toast.error("Mã xác thực không đúng. Vui lòng thử lại.");
       }
     } catch (err: any) {
-      console.error("Error:", err);
-      const errorMessage = err?.errors?.[0]?.longMessage || err?.message || "Xác thực thất bại. Vui lòng thử lại.";
+      console.error("Verification error:", err);
+      
+      const errorCode = err?.errors?.[0]?.code;
+      let errorMessage = "Xác thực thất bại. Vui lòng thử lại.";
+      
+      switch (errorCode) {
+        case "form_code_incorrect":
+          errorMessage = "Mã xác thực không đúng. Vui lòng thử lại.";
+          break;
+        case "form_code_expired":
+          errorMessage = "Mã xác thực đã hết hạn. Vui lòng yêu cầu mã mới.";
+          break;
+        default:
+          errorMessage = err?.errors?.[0]?.longMessage || err?.message || errorMessage;
+      }
+      
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
