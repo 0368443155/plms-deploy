@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
 import { ModeToggle } from "@/components/mode-toggle";
 import { useConvexAuth } from "convex/react";
-import { SignInButton, UserButton } from "@clerk/clerk-react";
+import { UserButton } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/spinner";
 import Link from "next/link";
@@ -26,14 +26,12 @@ export const Navbar = () => {
         {isLoading && <Spinner />}
         {!isAuthenticated && !isLoading && (
           <>
-            <SignInButton mode="modal">
-              <Button variant="ghost" size="sm">
-                Đăng nhập
-              </Button>
-            </SignInButton>
-            <SignInButton mode="modal">
-              <Button size="sm">Dùng PLMS miễn phí</Button>
-            </SignInButton>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/sign-in">Đăng nhập</Link>
+            </Button>
+            <Button size="sm" asChild>
+              <Link href="/sign-up">Dùng PLMS miễn phí</Link>
+            </Button>
           </>
         )}
         {isAuthenticated && !isLoading && (
