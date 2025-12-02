@@ -57,37 +57,23 @@ export default function SignUpPage() {
         }
       }
 
-      // Nếu cần verification, kiểm tra xem có email_code strategy không
+      // Nếu cần verification, thử gửi email verification
       if (signUp.status === "missing_requirements") {
-        const strategies = signUp.supportedFirstFactors || [];
-        const emailStrategy = strategies.find((s: any) => s.strategy === "email_code");
-        
-        if (emailStrategy) {
-          // Có email verification, gửi mã
-          try {
-            await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-            setPendingVerification(true);
-            toast.success("Vui lòng kiểm tra email để xác thực tài khoản");
-          } catch (verifyErr: any) {
-            console.error("Verification error:", verifyErr);
-            // Nếu không thể gửi verification, nhưng có session thì vẫn set active
-            if (signUp.createdSessionId && setActive) {
-              await setActive({ session: signUp.createdSessionId });
-              toast.success("Đăng ký thành công!");
-              router.push("/documents");
-            } else {
-              const errorMessage = verifyErr?.errors?.[0]?.longMessage || verifyErr?.message || "Không thể gửi email xác thực. Vui lòng thử lại.";
-              toast.error(errorMessage);
-            }
-          }
-        } else {
-          // Không có email verification strategy, thử set active nếu có session
+        try {
+          // Thử gửi email verification
+          await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+          setPendingVerification(true);
+          toast.success("Vui lòng kiểm tra email để xác thực tài khoản");
+        } catch (verifyErr: any) {
+          console.error("Verification error:", verifyErr);
+          // Nếu không thể gửi verification, nhưng có session thì vẫn set active
           if (signUp.createdSessionId && setActive) {
             await setActive({ session: signUp.createdSessionId });
             toast.success("Đăng ký thành công!");
             router.push("/documents");
           } else {
-            toast.error("Không thể hoàn tất đăng ký. Vui lòng thử lại.");
+            const errorMessage = verifyErr?.errors?.[0]?.longMessage || verifyErr?.message || "Không thể gửi email xác thực. Vui lòng thử lại.";
+            toast.error(errorMessage);
           }
         }
       } else {
