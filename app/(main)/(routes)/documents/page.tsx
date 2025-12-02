@@ -8,22 +8,46 @@ import { PlusCircle } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { TemplatePicker } from "@/components/template-picker";
+import { Template } from "@/lib/templates";
+import { useState } from "react";
 
 const DocumentsPage = () => {
   const router = useRouter();
   const { user } = useUser();
   const create = useMutation(api.documents.create);
+  const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
 
-  const onCreate = () => {
-    const promise = create({ title: "Không có tiêu đề" }).then((documentId) =>
-      router.push(`/documents/${documentId}`)
-    );
+  const handleCreate = (template?: Template) => {
+    if (!template) {
+      // Create empty document
+      const promise = create({
+        title: "Không có tiêu đề",
+      }).then((documentId) => router.push(`/documents/${documentId}`));
+      
+      toast.promise(promise, {
+        loading: "Đang tạo ghi chú mới...",
+        success: "Đã tạo ghi chú mới!",
+        error: "Không thể tạo ghi chú mới.",
+      });
+      return;
+    }
+
+    const promise = create({
+      title: template.title || template.name || "Không có tiêu đề",
+      content: template.content, // Already a JSON string
+      icon: template.icon,
+    }).then((documentId) => router.push(`/documents/${documentId}`));
 
     toast.promise(promise, {
       loading: "Đang tạo ghi chú mới...",
       success: "Đã tạo ghi chú mới!",
       error: "Không thể tạo ghi chú mới.",
     });
+  };
+
+  const onCreate = () => {
+    setIsTemplatePickerOpen(true);
   };
 
   return (
@@ -49,6 +73,14 @@ const DocumentsPage = () => {
         <PlusCircle className="h-4 w-4 mr-2" />
         Tạo ghi chú
       </Button>
+      <TemplatePicker
+        open={isTemplatePickerOpen}
+        onClose={() => setIsTemplatePickerOpen(false)}
+        onSelect={(template) => {
+          handleCreate(template);
+          setIsTemplatePickerOpen(false);
+        }}
+      />
     </div>
   );
 };

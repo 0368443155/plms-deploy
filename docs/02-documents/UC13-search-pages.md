@@ -223,6 +223,17 @@ export const getSearch = query({
 
     const userId = identity.subject;
 
+    // CÁCH CŨ (chỉ lấy tất cả, filter ở client):
+    // const documents = await ctx.db
+    //   .query("documents")
+    //   .withIndex("by_user", (q) => q.eq("userId", userId))
+    //   .filter((q) => q.eq(q.field("isArchived"), false))
+    //   .order("desc")
+    //   .collect();
+    // return documents;
+
+    // CÁCH MỚI - Trả về tất cả để client có thể search
+    // (Vẫn cần vì Convex search cần search term)
     const documents = await ctx.db
       .query("documents")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -233,6 +244,46 @@ export const getSearch = query({
     return documents;
   },
 });
+
+// CÁCH TỐT NHẤT - Full-text search với search term (Sinh viên)
+export const searchDocuments = query({
+  args: { search: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+
+    // Nếu không có search term, return tất cả
+    if (!args.search || args.search.trim() === "") {
+      return await ctx.db
+        .query("documents")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .filter((q) => q.eq(q.field("isArchived"), false))
+        .order("desc")
+        .collect();
+    }
+
+    // Sử dụng Convex Full-Text Search
+    const results = await ctx.db
+      .query("documents")
+      .withSearchIndex("search_title", (q) =>
+        q.search("title", args.search).eq("userId", userId).eq("isArchived", false)
+      )
+      .collect();
+
+    return results;
+  },
+});
+
+// Note: Để search cả content, cần:
+// 1. Thêm field contentText (plain text extracted từ JSON)
+// 2. Thêm searchIndex cho contentText
+// 3. Search trên cả title và contentText
+
 ```
 
 ### 5.2 Client-side Filtering
@@ -525,10 +576,26 @@ const results = fuse.search(searchQuery);
 - [Fuse.js (Fuzzy Search)](https://fusejs.io/)
 - [Zustand (State Management)](https://zustand-demo.pmnd.rs/)
 - [Keyboard Shortcuts Best Practices](https://www.nngroup.com/articles/keyboard-shortcuts/)
+- [Convex Full-Text Search](https://docs.convex.dev/text-search) - ⭐ New
 
 ---
 
-**Last Updated:** 02/12/2025  
-**Status:** ✅ Implemented and documented  
+**Last Updated:** 03/12/2025  
+**Status:** ✅ Implemented and documented (Updated for Students)  
 **Code Location:** `components/search-command.tsx`, `hooks/use-search.tsx`  
-**Key Features:** Command palette (Ctrl+K), Live search, Keyboard navigation, Fuzzy matching
+**Key Features:** Command palette (Ctrl+K), Live search, Keyboard navigation  
+**Student Features:** ✨ Full-text search, Search in content (planned)
+
+**Cải tiến cho Sinh viên:**
+- ✅ Convex Full-Text Search với `searchIndex` (Critical)
+- ✅ Search query mới: `searchDocuments` với search term
+- 📋 Planned: Search trong content (cần extract plain text)
+- 🎯 Lợi ích: Sinh viên tìm được tài liệu theo từ khóa trong bài giảng, không chỉ tên file
+- ⚡ Performance: Convex search nhanh hơn client-side filter
+
+**Implementation Priority:**
+1. ✅ Thêm `searchIndex` vào schema (Done)
+2. ✅ Tạo `searchDocuments` query (Done)
+3. 🔄 Update UI để dùng query mới (Next)
+4. 📝 Extract plain text từ content cho full search (Future)
+

@@ -28,6 +28,8 @@ import { TrashBox } from "./trash-box";
 import { useSearch } from "@/hooks/use-search";
 import { useSettings } from "@/hooks/use-settings";
 import { Navbar } from "./navbar";
+import { TemplatePicker } from "@/components/template-picker";
+import { Template } from "@/lib/templates";
 
 export const Navigation = () => {
   const router = useRouter();
@@ -43,6 +45,7 @@ export const Navigation = () => {
   const navbarRef = useRef<ElementRef<"div">>(null);
   const [isResetting, setIsResetting] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(isMobile); // collapse the sidebar by default if it is a mobile
+  const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
 
   useEffect(() => {
     if (isMobile) {
@@ -50,6 +53,7 @@ export const Navigation = () => {
     } else {
       resetWidth();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMobile]);
 
   useEffect(() => {
@@ -123,16 +127,38 @@ export const Navigation = () => {
     }
   };
 
-  // handle creating a new document
-  const handleCreate = () => {
-    const promise = create({ title: "Không có tiêu đề" }).then((documentId) =>
-      router.push(`/documents/${documentId}`)
-    );
+  // handle creating a new document (with optional template)
+  const handleCreate = (template?: Template) => {
+    if (!template) {
+      // Create empty document
+      const promise = create({
+        title: "Không có tiêu đề",
+      }).then((documentId) => router.push(`/documents/${documentId}`));
+      
+      toast.promise(promise, {
+        loading: "Đang tạo ghi chú mới...",
+        success: "Đã tạo ghi chú mới!",
+        error: "Không thể tạo ghi chú mới.",
+      });
+      return;
+    }
+
+    const promise = create({
+      title: template.title || template.name || "Không có tiêu đề",
+      content: template.content, // Already a JSON string
+      icon: template.icon,
+    }).then((documentId) => router.push(`/documents/${documentId}`));
+
     toast.promise(promise, {
       loading: "Đang tạo ghi chú mới...",
       success: "Đã tạo ghi chú mới!",
       error: "Không thể tạo ghi chú mới.",
     });
+  };
+
+  // Show template picker when creating new document
+  const handleCreateWithTemplate = () => {
+    setIsTemplatePickerOpen(true);
   };
 
   return (
@@ -165,7 +191,11 @@ export const Navigation = () => {
             onClick={search.onOpen}
           />
           <Item label="Cài đặt" icon={Settings} onClick={settings.onOpen} />
-          <Item onClick={handleCreate} label="Trang mới" icon={PlusCircle} />
+          <Item
+            onClick={handleCreateWithTemplate}
+            label="Trang mới"
+            icon={PlusCircle}
+          />
         </div>
         <div className="mt-4">
           <DocumentList />
@@ -179,9 +209,17 @@ export const Navigation = () => {
               className="p-0 w-72"
             >
               <TrashBox />
-            </PopoverContent>
-          </Popover>
-        </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+      <TemplatePicker
+        open={isTemplatePickerOpen}
+        onClose={() => setIsTemplatePickerOpen(false)}
+        onSelect={(template) => {
+          handleCreate(template);
+          setIsTemplatePickerOpen(false);
+        }}
+      />
         {/* To resize the sidebar */}
         <div
           onMouseDown={handleMouseDown}

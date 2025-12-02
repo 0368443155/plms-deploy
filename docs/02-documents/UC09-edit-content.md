@@ -86,6 +86,36 @@
 - Convert to BlockNote format
 - Auto-save triggered
 
+**A6: Insert LaTeX/Math equation (Sinh viên)**
+- Tại bước 5: Type `/math` hoặc `$$`
+- Show math block editor
+- Enter LaTeX syntax: `\frac{a}{b}`, `\sum_{i=1}^{n}`, `\int_0^\infty`
+- Render equation với KaTeX/MathJax
+- Auto-save triggered
+- Use case: Ghi chú môn Toán, Vật lý, Kỹ thuật
+
+**A7: Upload/Embed PDF file (Sinh viên)**
+- Tại bước 5: Type `/pdf` hoặc drag PDF file
+- Upload PDF to EdgeStore
+- Get PDF URL
+- Insert PDF viewer block
+- Options:
+  - Full page embed
+  - Thumbnail preview
+  - Download link
+- Auto-save triggered
+- Use case: Embed slide bài giảng, tài liệu tham khảo
+
+**A8: Code block with syntax highlighting (Sinh viên)**
+- Tại bước 5: Type ` ```python ` (hoặc js, java, c++, etc.)
+- Show code block with language selector
+- Enter code
+- Auto syntax highlighting
+- Line numbers (optional)
+- Copy button
+- Auto-save triggered
+- Use case: Ghi chú code trong môn lập trình
+
 ### 2.3 Luồng ngoại lệ (Exception Flows)
 
 **E1: Auto-save failed**
@@ -215,6 +245,26 @@ documents: defineTable({
   icon: v.optional(v.string()),
   isPublished: v.boolean(),
 })
+  .index("by_user", ["userId"])
+  .index("by_user_parent", ["userId", "parentDocument"])
+  // Full-text search index cho sinh viên (UC13)
+  .searchIndex("search_title", {
+    searchField: "title",
+    filterFields: ["userId", "isArchived"]
+  })
+  // Note: Để search cả content, cần extract plain text từ JSON
+  // và lưu vào field riêng hoặc xử lý client-side
+```
+
+**Lưu ý về Content Storage (cho sinh viên):**
+- `content` lưu dạng JSON string của BlockNote blocks
+- Để hỗ trợ full-text search trong content:
+  - Option 1: Extract plain text khi save và lưu vào field `contentText`
+  - Option 2: Client-side search với Fuse.js (hiện tại)
+  - Option 3: Convex Search Index trên field text riêng
+- Convex hỗ trợ tìm kiếm full-text rất tốt, nên tận dụng
+
+
 ```
 
 ### 4.2 Content Format (BlockNote JSON)
@@ -674,12 +724,25 @@ const Editor = useMemo(
 
 - [BlockNote Documentation](https://www.blocknotejs.org/)
 - [BlockNote React](https://www.blocknotejs.org/docs/react)
+- [BlockNote Math Plugin](https://www.blocknotejs.org/docs/blocks/math) - LaTeX support
 - [EdgeStore](https://edgestore.dev/)
 - [Convex Real-time](https://docs.convex.dev/database/reading-data)
+- [KaTeX](https://katex.org/) - Math rendering
+- [PDF.js](https://mozilla.github.io/pdf.js/) - PDF viewer
+- [Prism.js](https://prismjs.com/) - Code syntax highlighting
 
 ---
 
-**Last Updated:** 02/12/2025  
-**Status:** ✅ Implemented and documented  
+**Last Updated:** 03/12/2025  
+**Status:** ✅ Implemented and documented (Updated for Students)  
 **Code Location:** `components/editor.tsx`, `app/(main)/(routes)/documents/[documentId]/`  
-**Key Features:** Auto-save, Rich text editing, Image upload, Markdown support
+**Key Features:** Auto-save, Rich text editing, Image upload, Markdown support  
+**Student Features:** ✨ LaTeX/Math equations, PDF embedding, Code syntax highlighting
+
+**Cải tiến cho Sinh viên:**
+- ✅ LaTeX/Math equation support (A6)
+- ✅ PDF file embedding (A7)
+- ✅ Code syntax highlighting (A8)
+- ✅ Full-text search index trong schema
+- 🎯 Phù hợp cho: Ghi chú bài giảng, báo cáo thí nghiệm, code documentation
+

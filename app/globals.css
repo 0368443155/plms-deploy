@@ -80,3 +80,26 @@ body,
     @apply bg-background text-foreground;
   }
 }
+
+/* Study Mode Styles - Distraction-free reading */
+.study-mode {
+  /* Hide sidebar when study mode is active */
+}
+
+.study-mode ~ * aside,
+.study-mode ~ * nav {
+  display: none !important;
+}
+
+/* Study mode full-screen content */
+.study-mode .study-mode-content {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background: var(--background);
+  overflow-y: auto;
+  padding: 2rem;
+}

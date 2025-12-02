@@ -74,19 +74,20 @@ export const Item = ({
     onExpand?.();
   };
 
-  // create a new document
+  // create a new document (nested - no template picker for simplicity)
   const onCreate = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     event.stopPropagation();
     if (!id) return; // if there is no id, break the function
-    const promise = create({ title: "Không có tiêu đề", parentDocument: id }).then(
-      (documentId) => {
-        // if the document is not expanded, expand it to show the newly created child document
-        if (!expanded) {
-          onExpand?.();
-        }
-        router.push(`/documents/${documentId}`);
+    const promise = create({
+      title: "Không có tiêu đề",
+      parentDocument: id,
+    }).then((documentId) => {
+      // if the document is not expanded, expand it to show the newly created child document
+      if (!expanded) {
+        onExpand?.();
       }
-    );
+      router.push(`/documents/${documentId}`);
+    });
 
     toast.promise(promise, {
       loading: "Đang tạo ghi chú mới...",

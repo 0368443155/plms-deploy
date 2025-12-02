@@ -9,6 +9,7 @@ import { ElementRef, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import TextareaAutosize from "react-textarea-autosize";
 import { useCoverImage } from "@/hooks/use-cover-image";
+import { ExportMenu } from "@/components/export-menu";
 
 interface ToolbarProps {
   initialData: Doc<"documents">;
@@ -109,6 +110,9 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
             <ImageIcon className="h-4 w-4 mr-2" />
             Thêm ảnh bìa
           </Button>
+        )}
+        {!preview && (
+          <ExportMenu documentTitle={initialData.title || "document"} />
         )}
       </div>
       {isEditing && !preview ? (

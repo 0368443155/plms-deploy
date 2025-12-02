@@ -51,11 +51,37 @@
 - Mỗi document có ID riêng
 - Sidebar cập nhật real-time
 
-**A3: Tạo document với template**
-- Tại bước 4: Sử dụng template có sẵn
-- Pre-fill content từ template
-- Title từ template
-- Icon và cover từ template
+**A3: Tạo document với template (Sinh viên)**
+- Tại bước 2: Click "New page" → Show template picker
+- Hoặc click "New from template"
+- Hệ thống hiển thị template options:
+  - 📚 **Lecture Notes** (Ghi chú bài giảng)
+    - Pre-filled: Heading "Lecture [Date]", sections: Summary, Key Points, Questions
+  - 📝 **Essay Planner** (Lập dàn ý tiểu luận)
+    - Pre-filled: Introduction, Body (3 paragraphs), Conclusion, References
+  - 📊 **Grade Tracker** (Theo dõi điểm số)
+    - Pre-filled: Table với columns: Subject, Assignment, Grade, Weight
+  - 🔬 **Lab Report** (Báo cáo thí nghiệm)
+    - Pre-filled: Objective, Materials, Procedure, Results, Conclusion
+  - 💡 **Study Guide** (Tài liệu ôn tập)
+    - Pre-filled: Topics, Flashcards section, Practice questions
+  - 📅 **Assignment Tracker** (Theo dõi bài tập)
+    - Pre-filled: Table với deadline, status, priority
+- User chọn template
+- Tại bước 4: Pre-fill content từ template
+- Title từ template (có thể edit)
+- Icon và cover từ template (optional)
+- Continue từ bước 5
+
+**A4: Quick Note (Nháp nhanh - Sinh viên)**
+- Tại bước 2: Press Ctrl+Shift+N hoặc click "Quick Note"
+- Tạo trang nhanh với title: "Quick Note [Timestamp]"
+- ParentDocument: undefined (root level)
+- Icon: 📌 (pin icon)
+- Không cần confirm, không cần chọn template
+- Redirect ngay đến editor
+- Use case: Ghi chú nhanh trong giờ học, không cần lo về tổ chức
+- Có thể organize sau
 
 ### 2.3 Luồng ngoại lệ (Exception Flows)
 
@@ -549,9 +575,20 @@ if (args.parentDocument) {
 - [Convex Mutations](https://docs.convex.dev/database/writing-data)
 - [Next.js Routing](https://nextjs.org/docs/app/building-your-application/routing)
 - [React Query](https://tanstack.com/query/latest)
+- [Document Templates Best Practices](https://www.notion.so/help/guides/creating-templates)
 
 ---
 
-**Last Updated:** 02/12/2025  
-**Status:** ✅ Implemented and documented  
-**Code Location:** `convex/documents.ts`, `app/(main)/_components/`
+**Last Updated:** 03/12/2025  
+**Status:** ✅ Implemented and documented (Updated for Students)  
+**Code Location:** `convex/documents.ts`, `app/(main)/_components/`  
+**Key Features:** Create documents, Nested pages, Real-time sync  
+**Student Features:** ✨ Template System, Quick Note
+
+**Cải tiến cho Sinh viên:**
+- ✅ Template System với 6 templates (A3):
+  - 📚 Lecture Notes, 📝 Essay Planner, 📊 Grade Tracker
+  - 🔬 Lab Report, 💡 Study Guide, 📅 Assignment Tracker
+- ✅ Quick Note (Ctrl+Shift+N) cho ghi chú nhanh (A4)
+- 🎯 Phù hợp cho: Tổ chức học tập, quản lý bài tập, lập kế hoạch học
+

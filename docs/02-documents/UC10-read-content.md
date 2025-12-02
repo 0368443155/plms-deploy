@@ -80,6 +80,40 @@
 - If published → Copy public URL
 - Show toast "Link copied"
 
+**A6: Export to PDF/Markdown (Sinh viên)**
+- Tại bước 9: Click "Export" trong menu
+- Hệ thống hiển thị export options:
+  - 📄 **Export as PDF**
+    - Convert document to PDF
+    - Include cover image, title, content
+    - Preserve formatting
+    - Download PDF file
+    - Use case: Nộp bài, in tài liệu ôn thi
+  - 📝 **Export as Markdown**
+    - Convert BlockNote JSON to Markdown
+    - Download .md file
+    - Use case: Backup, share với GitHub
+  - 📋 **Copy as Plain Text**
+    - Extract plain text from content
+    - Copy to clipboard
+    - Use case: Paste vào email, chat
+- User chọn format
+- Hệ thống generate file
+- Auto-download hoặc copy
+
+**A7: Study Mode (Distraction-free - Sinh viên)**
+- Tại bước 9: Click "Study Mode" hoặc press F11
+- Hệ thống:
+  - Hide sidebar (collapse)
+  - Hide toolbar (minimal)
+  - Hide all UI elements
+  - Full-screen content
+  - Only show: Title + Content
+  - Dark mode recommended
+- Focus mode: Chỉ hiện nội dung để tập trung ôn bài
+- Press Esc để thoát Study Mode
+- Use case: Ôn thi, đọc tài liệu không bị phân tâm
+
 ### 2.3 Luồng ngoại lệ (Exception Flows)
 
 **E1: Document not found**
@@ -666,10 +700,27 @@ export const PublishButton = ({ initialData }: PublishButtonProps) => {
 - [Convex Queries](https://docs.convex.dev/database/reading-data)
 - [Next.js Dynamic Routes](https://nextjs.org/docs/app/building-your-application/routing/dynamic-routes)
 - [BlockNote Read-only](https://www.blocknotejs.org/docs/editor-basics/setup#editable)
+- [jsPDF](https://github.com/parallax/jsPDF) - PDF export
+- [html2canvas](https://html2canvas.hertzen.com/) - HTML to image
+- [Turndown](https://github.com/mixmark-io/turndown) - HTML to Markdown
 
 ---
 
-**Last Updated:** 02/12/2025  
-**Status:** ✅ Implemented and documented  
+**Last Updated:** 03/12/2025  
+**Status:** ✅ Implemented and documented (Updated for Students)  
 **Code Location:** `app/(main)/(routes)/documents/`, `app/(public)/(routes)/preview/`  
-**Key Features:** Public sharing, Read-only mode, Access control, SEO optimization
+**Key Features:** Public sharing, Read-only mode, Access control  
+**Student Features:** ✨ Export PDF/Markdown, Study Mode (Distraction-free)
+
+**Cải tiến cho Sinh viên:**
+- ✅ Export to PDF (A6) - Nộp bài, in tài liệu
+- ✅ Export to Markdown (A6) - Backup, share
+- ✅ Copy as Plain Text (A6) - Quick sharing
+- ✅ Study Mode / Distraction-free (A7) - Tập trung ôn thi
+- 🎯 Use cases: Nộp assignment, ôn thi không bị phân tâm, backup notes
+
+**Implementation Notes:**
+- PDF export: Sử dụng jsPDF + html2canvas
+- Markdown export: Convert BlockNote JSON → Markdown
+- Study Mode: CSS-based, hide sidebar/toolbar, F11 toggle
+

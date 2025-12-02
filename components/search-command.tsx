@@ -19,8 +19,24 @@ import { useEffect, useState } from "react";
 export const SearchCommand = () => {
   const { user } = useUser();
   const router = useRouter();
-  const documents = useQuery(api.documents.getSearch);
+  const [search, setSearch] = useState("");
   const [isMounted, setIsMounted] = useState(false);
+
+  // Sử dụng searchDocuments query với search term
+  // Nếu search rỗng, query sẽ return tất cả documents
+  const documents = useQuery(
+    api.documents.searchDocuments,
+    search.trim() !== "" ? { search: search.trim() } : "skip"
+  );
+
+  // Fallback: Nếu search rỗng, dùng getSearch để show tất cả
+  const allDocuments = useQuery(
+    api.documents.getSearch,
+    search.trim() === "" ? {} : "skip"
+  );
+
+  // Sử dụng documents từ searchDocuments nếu có search term, nếu không dùng allDocuments
+  const displayDocuments = search.trim() !== "" ? documents : allDocuments;
 
   const toggle = useSearch((store) => store.toggle);
   const isOpen = useSearch((store) => store.isOpen);
@@ -46,22 +62,38 @@ export const SearchCommand = () => {
   const onSelect = (id: string) => {
     router.push(`/documents/${id}`);
     onClose();
+    setSearch(""); // Reset search khi đóng
   };
+
+  // Reset search khi đóng modal
+  useEffect(() => {
+    if (!isOpen) {
+      setSearch("");
+    }
+  }, [isOpen]);
 
   if (!isMounted) return null;
 
   return (
     <CommandDialog open={isOpen} onOpenChange={onClose}>
-      <CommandInput placeholder={`Tìm kiếm PLMS của ${user?.fullName}...`} />
+      <CommandInput
+        placeholder={`Tìm kiếm PLMS của ${user?.fullName}...`}
+        value={search}
+        onValueChange={setSearch}
+      />
       <CommandList>
-        <CommandEmpty>Không tìm thấy kết quả.</CommandEmpty>
+        <CommandEmpty>
+          {search.trim() !== ""
+            ? "Không tìm thấy kết quả."
+            : "Nhập từ khóa để tìm kiếm..."}
+        </CommandEmpty>
         <CommandGroup heading="Tài liệu">
-          {documents?.map((document) => (
+          {displayDocuments?.map((document) => (
             <CommandItem
               key={document._id}
               value={`${document._id}-${document.title}`}
               title={document.title}
-              onSelect={onSelect}
+              onSelect={() => onSelect(document._id)}
             >
               {document.icon ? (
                 <p className="mr-2 text-[18px]">{document.icon}</p>
