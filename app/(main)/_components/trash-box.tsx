@@ -10,6 +10,7 @@ import { Search, Trash, Undo } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { matchesSearch } from "@/lib/utils";
 
 export const TrashBox = () => {
   const router = useRouter();
@@ -21,7 +22,7 @@ export const TrashBox = () => {
   const [search, setSearch] = useState("");
 
   const filteredDocuments = documents?.filter((document) => {
-    return document.title.toLowerCase().includes(search.toLowerCase());
+    return matchesSearch(search, document.title);
   });
 
   const onClick = (documentId: string) => {
