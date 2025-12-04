@@ -12,7 +12,7 @@ import dynamic from "next/dynamic";
 import { CodeBlockEnhancer } from "./code-block-enhancer";
 
 // Lazy load PDF components to avoid webpack bundling issues with pdfjs-dist
-const PDFBlock = dynamic(() => import("./pdf-block"), {
+const PDFBlock = dynamic(() => import("./pdf-block").then(mod => ({ default: mod.PDFBlock })), {
   ssr: false,
   loading: () => (
     <div className="p-4 border rounded-lg bg-muted">
