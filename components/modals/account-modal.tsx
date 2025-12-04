@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ModeToggle } from "@/components/mode-toggle";
-import { useSettings } from "@/hooks/use-settings";
+import { useAccountModal } from "@/hooks/use-account-modal";
 import { useUser } from "@clerk/clerk-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -12,11 +12,11 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Spinner } from "@/components/spinner";
-import { User, Shield, Mail, UserCircle, Link as LinkIcon, Eye, EyeOff } from "lucide-react";
+import { User, Shield, Mail, Link as LinkIcon, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export const SettingsModal = () => {
-  const settings = useSettings();
+export const AccountModal = () => {
+  const accountModal = useAccountModal();
   const { user } = useUser();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("account");
@@ -101,6 +101,7 @@ export const SettingsModal = () => {
         username: username.trim() || undefined,
       });
       toast.success("Đã cập nhật username");
+      router.refresh();
     } catch (error: any) {
       toast.error(error?.errors?.[0]?.message || "Không thể cập nhật username");
     } finally {
@@ -128,13 +129,8 @@ export const SettingsModal = () => {
     if (!user) return;
     
     try {
-      // Clerk automatically sets the first verified email as primary
-      // To change primary, we need to reorder or use update method
       const emailAddress = user.emailAddresses.find(e => e.id === emailId);
       if (emailAddress && emailAddress.verification?.status === "verified") {
-        // Note: Clerk doesn't have a direct setPrimary method in v4
-        // The primary email is typically the first verified email
-        // This is a limitation - users may need to verify the email first
         toast("Email này sẽ trở thành email chính sau khi được xác thực");
         router.refresh();
       } else {
@@ -176,7 +172,7 @@ export const SettingsModal = () => {
   };
 
   return (
-    <Dialog open={settings.isOpen} onOpenChange={settings.onClose}>
+    <Dialog open={accountModal.isOpen} onOpenChange={accountModal.onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="border-b pb-4">
           <DialogTitle className="text-2xl font-semibold">Account</DialogTitle>
@@ -497,3 +493,4 @@ export const SettingsModal = () => {
     </Dialog>
   );
 };
+

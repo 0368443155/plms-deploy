@@ -5,18 +5,19 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SignOutButton, useUser } from "@clerk/clerk-react";
-import { ChevronsLeftRight } from "lucide-react";
+import { ChevronsLeftRight, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useSettings } from "@/hooks/use-settings";
 
 export const UserItem = () => {
   const { user } = useUser();
   const router = useRouter();
+  const settings = useSettings();
 
   const handleSignOut = () => {
     toast.success("Đăng xuất thành công");
@@ -66,12 +67,18 @@ export const UserItem = () => {
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          asChild
+          className="w-full cursor-pointer"
+          onClick={settings.onOpen}
+        >
+          <Settings className="h-4 w-4 mr-2" />
+          Cài đặt tài khoản
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={handleSignOut}
           className="w-full cursor-pointer text-muted-foreground"
         >
-          <SignOutButton signOutCallback={handleSignOut}>
-            Đăng xuất
-          </SignOutButton>
+          Đăng xuất
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

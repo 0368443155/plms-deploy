@@ -17,6 +17,8 @@ export default function SignUpPage() {
   const { isSignedIn } = useUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -35,6 +37,12 @@ export default function SignUpPage() {
     e.preventDefault();
     if (!isLoaded || !signUp) return;
 
+    // Validate password confirmation
+    if (password !== confirmPassword) {
+      toast.error("Mật khẩu xác nhận không khớp. Vui lòng thử lại.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -44,6 +52,7 @@ export default function SignUpPage() {
         password,
         firstName,
         lastName,
+        phoneNumber: phone || undefined,
       });
 
       // Kiểm tra trạng thái sau khi tạo
@@ -171,7 +180,7 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
       <div className="w-full max-w-md space-y-8">
         {/* Logo và nút quay lại */}
         <div className="flex items-center gap-4">
@@ -237,6 +246,18 @@ export default function SignUpPage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="phone">Số điện thoại</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="0123456789"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="password">Mật khẩu</Label>
                 <Input
                   id="password"
@@ -244,6 +265,20 @@ export default function SignUpPage() {
                   placeholder="Tối thiểu 8 ký tự"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  minLength={8}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Nhập lại mật khẩu</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="Nhập lại mật khẩu"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   disabled={isLoading}
                   minLength={8}

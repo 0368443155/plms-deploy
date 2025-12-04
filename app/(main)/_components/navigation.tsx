@@ -30,6 +30,9 @@ import { useSettings } from "@/hooks/use-settings";
 import { Navbar } from "./navbar";
 import { TemplatePicker } from "@/components/template-picker";
 import { Template } from "@/lib/templates";
+import Link from "next/link";
+import Image from "next/image";
+import { Home } from "lucide-react";
 
 export const Navigation = () => {
   const router = useRouter();
@@ -183,6 +186,27 @@ export const Navigation = () => {
           <ChevronsLeft className="h-6 w-6" />
         </div>
         <div>
+          <Link 
+            href="/" 
+            className="flex items-center gap-x-2 px-3 py-2 mb-2 hover:bg-primary/5 rounded-sm transition-colors"
+          >
+            <Image
+              src="/logo.svg"
+              height={24}
+              width={24}
+              alt="Logo"
+              className="dark:hidden"
+            />
+            <Image
+              src="/logo-dark.svg"
+              height={24}
+              width={24}
+              alt="Logo"
+              className="hidden dark:block"
+            />
+            <span className="font-semibold text-sm">PLMS</span>
+            <Home className="h-4 w-4 ml-auto text-muted-foreground" />
+          </Link>
           <UserItem />
           <Item
             label="Tìm kiếm"
