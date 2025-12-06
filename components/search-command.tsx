@@ -7,6 +7,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  Command,
 } from "@/components/ui/command";
 import { api } from "@/convex/_generated/api";
 import { useSearch } from "@/hooks/use-search";
@@ -14,7 +15,8 @@ import { useUser } from "@clerk/clerk-react";
 import { useQuery } from "convex/react";
 import { File } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { matchesSearch } from "@/lib/utils";
 
 export const SearchCommand = () => {
   const { user } = useUser();
@@ -36,7 +38,18 @@ export const SearchCommand = () => {
   );
 
   // Sử dụng documents từ searchDocuments nếu có search term, nếu không dùng allDocuments
-  const displayDocuments = search.trim() !== "" ? documents : allDocuments;
+  // Filter thêm ở client-side để đảm bảo tìm kiếm hoạt động đúng với normalizeVietnamese
+  const displayDocuments = useMemo(() => {
+    const docs = search.trim() !== "" ? documents : allDocuments;
+    if (!docs || docs.length === 0) return [];
+    
+    // Nếu có search term, filter lại ở client-side để đảm bảo tìm kiếm đúng
+    if (search.trim() !== "") {
+      return docs.filter((doc) => matchesSearch(search.trim(), doc.title));
+    }
+    
+    return docs;
+  }, [documents, allDocuments, search]);
 
   const toggle = useSearch((store) => store.toggle);
   const isOpen = useSearch((store) => store.isOpen);
@@ -75,7 +88,7 @@ export const SearchCommand = () => {
   if (!isMounted) return null;
 
   return (
-    <CommandDialog open={isOpen} onOpenChange={onClose}>
+    <CommandDialog open={isOpen} onOpenChange={onClose} shouldFilter={false}>
       <CommandInput
         placeholder={`Tìm kiếm PLMS của ${user?.fullName}...`}
         value={search}
@@ -91,7 +104,7 @@ export const SearchCommand = () => {
           {displayDocuments?.map((document) => (
             <CommandItem
               key={document._id}
-              value={`${document._id}-${document.title}`}
+              value={document.title} // Use title as value for better search
               title={document.title}
               onSelect={() => onSelect(document._id)}
             >

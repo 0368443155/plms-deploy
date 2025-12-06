@@ -28,15 +28,15 @@ export const Menu = ({ documentId }: MenuProps) => {
   const archive = useMutation(api.documents.archive);
 
   const onArchive = () => {
-    const promise = archive({ id: documentId });
+    const promise = archive({ id: documentId }).then(() => {
+      router.push("/documents");
+    });
 
     toast.promise(promise, {
       loading: "Đang chuyển vào thùng rác...",
       success: "Đã chuyển ghi chú vào thùng rác!",
       error: "Không thể lưu trữ ghi chú.",
     });
-
-    router.push("/documents");
   };
 
   return (

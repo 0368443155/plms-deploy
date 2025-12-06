@@ -65,6 +65,29 @@ export const TrashBox = () => {
     );
   }
 
+  // Show message if no documents
+  if (!documents || documents.length === 0) {
+    return (
+      <div className="text-sm">
+        <div className="flex items-center gap-x-1 p-2">
+          <Search className="h-4 w-4" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-7 px-2 focus-visible:ring-transparent bg-secondary"
+            placeholder="Lọc theo tiêu đề trang..."
+            disabled
+          />
+        </div>
+        <div className="mt-2 px-1 pb-1">
+          <p className="text-xs text-center text-muted-foreground pb-2">
+            Không tìm thấy tài liệu nào.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="text-sm">
       <div className="flex items-center gap-x-1 p-2">
@@ -78,9 +101,16 @@ export const TrashBox = () => {
       </div>
       {/* Will be rendered only if it is the last element */}
       <div className="mt-2 px-1 pb-1">
-        <p className="hidden last:block text-xs text-center text-muted-foreground pb-2">
-          Không tìm thấy tài liệu nào.
-        </p>
+        {filteredDocuments && filteredDocuments.length === 0 && search.trim() !== "" && (
+          <p className="text-xs text-center text-muted-foreground pb-2">
+            Không tìm thấy tài liệu nào với từ khóa &quot;{search}&quot;.
+          </p>
+        )}
+        {filteredDocuments && filteredDocuments.length === 0 && search.trim() === "" && (
+          <p className="text-xs text-center text-muted-foreground pb-2">
+            Không tìm thấy tài liệu nào.
+          </p>
+        )}
         {filteredDocuments?.map((document) => (
           <div
             key={document._id}

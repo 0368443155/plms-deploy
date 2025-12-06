@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 interface TemplatePickerProps {
   open: boolean;
   onClose: () => void;
-  onSelect: (template: Template) => void;
+  onSelect: (template?: Template) => void;
 }
 
 export const TemplatePicker = ({
@@ -62,8 +62,11 @@ export const TemplatePicker = ({
         </div>
         <div className="mt-4 pt-4 border-t">
           <button
-            onClick={onClose}
-            className="text-sm text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              onSelect(undefined); // Pass undefined to create empty page
+              onClose();
+            }}
+            className="text-sm text-muted-foreground hover:text-foreground w-full text-center"
           >
             Hoặc tạo trang trống
           </button>

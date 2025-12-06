@@ -48,7 +48,8 @@ export const archive = mutation({
       isArchived: true,
     });
 
-    recursiveArchive(args.id);
+    // Await recursive archive to ensure all children are archived before returning
+    await recursiveArchive(args.id);
 
     return document;
   },
@@ -123,14 +124,22 @@ export const getTrash = query({
 
     const userId = identity.subject;
 
-    const documents = await ctx.db
+    // Get all documents for this user
+    const allDocuments = await ctx.db
       .query("documents")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .filter((q) => q.eq(q.field("isArchived"), true))
-      .order("desc")
       .collect();
 
-    return documents;
+    // Filter to only archived documents
+    // This ensures we get all archived documents regardless of parentDocument
+    const archivedDocuments = allDocuments.filter((doc) => doc.isArchived === true);
+
+    // Sort by most recently archived (assuming _creationTime exists)
+    // If not, we can use a different field or just return as is
+    return archivedDocuments.sort((a, b) => {
+      // Sort by creation time descending (newest first)
+      return b._creationTime - a._creationTime;
+    });
   },
 });
 
