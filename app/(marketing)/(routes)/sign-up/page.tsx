@@ -18,7 +18,6 @@ export default function SignUpPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [phone, setPhone] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -52,7 +51,6 @@ export default function SignUpPage() {
         password,
         firstName,
         lastName,
-        phoneNumber: phone || undefined,
       });
 
       // Kiểm tra trạng thái sau khi tạo
@@ -241,18 +239,6 @@ export default function SignUpPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  disabled={isLoading}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">Số điện thoại</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="0123456789"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
                   disabled={isLoading}
                 />
               </div>
