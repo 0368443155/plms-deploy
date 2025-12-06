@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { ModeToggle } from "@/components/mode-toggle";
 import { useAccountModal } from "@/hooks/use-account-modal";
-import { useUser } from "@clerk/clerk-react";
+import { useUser, useClerk } from "@clerk/clerk-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,17 +14,21 @@ import { toast } from "sonner";
 import { Spinner } from "@/components/spinner";
 import { User, Shield, Mail, Link as LinkIcon, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { SingleImageDropzone } from "@/components/single-image-dropzone";
+import { useEdgeStore } from "@/lib/edgestore";
 
 export const AccountModal = () => {
   const accountModal = useAccountModal();
-  const { user } = useUser();
+  const { user, isLoaded: isUserLoaded } = useUser();
   const router = useRouter();
+  const { edgestore } = useEdgeStore();
   const [activeTab, setActiveTab] = useState("account");
   
   // Profile state
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [avatarFile, setAvatarFile] = useState<File | undefined>(undefined);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   
   // Username state
@@ -37,9 +41,6 @@ export const AccountModal = () => {
       setFirstName(user.firstName || "");
       setLastName(user.lastName || "");
       setUsername(user.username || "");
-      // Get primary phone number
-      const primaryPhone = user.phoneNumbers.find(p => p.id === user.primaryPhoneNumberId);
-      setPhone(primaryPhone?.phoneNumber || user.phoneNumbers[0]?.phoneNumber || "");
     }
   }, [user]);
   
@@ -54,6 +55,46 @@ export const AccountModal = () => {
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
+  const handleAvatarUpload = async (file?: File) => {
+    if (!file || !user) return;
+    
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Chỉ chấp nhận file ảnh");
+      return;
+    }
+    
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Kích thước ảnh không được vượt quá 5MB");
+      return;
+    }
+    
+    setIsUploadingAvatar(true);
+    try {
+      // Upload to EdgeStore
+      const res = await edgestore.publicFiles.upload({
+        file,
+        options: {
+          replaceTargetUrl: user.imageUrl || undefined,
+        },
+      });
+      
+      // Update Clerk user with new image URL
+      await user.update({
+        imageUrl: res.url,
+      });
+      
+      toast.success("Đã cập nhật ảnh đại diện");
+      setAvatarFile(undefined);
+      router.refresh();
+    } catch (error: any) {
+      toast.error(error?.errors?.[0]?.message || "Không thể cập nhật ảnh đại diện");
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
   const handleUpdateProfile = async () => {
     if (!user) return;
     
@@ -63,24 +104,6 @@ export const AccountModal = () => {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
       };
-      
-      // Update phone number if changed
-      if (phone.trim()) {
-        const currentPhone = user.phoneNumbers.find(p => p.id === user.primaryPhoneNumberId)?.phoneNumber || user.phoneNumbers[0]?.phoneNumber || "";
-        if (phone.trim() !== currentPhone) {
-          // If phone exists, delete old and create new; otherwise create new
-          const existingPhone = user.phoneNumbers[0];
-          if (existingPhone) {
-            try {
-              await existingPhone.destroy();
-            } catch (error) {
-              // If destroy fails, continue anyway
-            }
-          }
-          // Create new phone number
-          await user.createPhoneNumber({ phoneNumber: phone.trim() });
-        }
-      }
       
       await user.update(updateData);
       toast.success("Đã cập nhật thông tin cá nhân");
@@ -142,7 +165,10 @@ export const AccountModal = () => {
   };
 
   const handleChangePassword = async () => {
-    if (!user) return;
+    if (!user || !isUserLoaded) {
+      toast.error("Vui lòng đợi hệ thống tải thông tin người dùng");
+      return;
+    }
     
     if (newPassword !== confirmPassword) {
       toast.error("Mật khẩu xác nhận không khớp");
@@ -154,18 +180,62 @@ export const AccountModal = () => {
       return;
     }
     
+    if (!currentPassword) {
+      toast.error("Vui lòng nhập mật khẩu hiện tại");
+      return;
+    }
+    
     setIsChangingPassword(true);
     try {
+      // Đảm bảo user object được refresh trước khi update
+      await user.reload();
+      
+      // Kiểm tra xem user có password strategy không
+      const hasPassword = user.passwordEnabled;
+      if (!hasPassword) {
+        toast.error("Tài khoản của bạn không có mật khẩu. Vui lòng đặt mật khẩu từ trang đăng nhập.");
+        return;
+      }
+      
       await user.updatePassword({
         currentPassword,
         newPassword,
+        signOutOfOtherSessions: false, // Không đăng xuất khỏi các thiết bị khác
       });
+      
       toast.success("Đã đổi mật khẩu thành công");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      router.refresh();
     } catch (error: any) {
-      toast.error(error?.errors?.[0]?.message || "Không thể đổi mật khẩu");
+      console.error("Change password error:", error);
+      
+      // Xử lý các lỗi cụ thể
+      const errorCode = error?.errors?.[0]?.code;
+      const errorMessage = error?.errors?.[0]?.message || error?.message;
+      
+      switch (errorCode) {
+        case "form_password_incorrect":
+          toast.error("Mật khẩu hiện tại không đúng");
+          break;
+        case "form_password_pwned":
+          toast.error("Mật khẩu này đã bị rò rỉ. Vui lòng sử dụng mật khẩu khác");
+          break;
+        case "form_password_length_too_short":
+          toast.error("Mật khẩu phải có ít nhất 8 ký tự");
+          break;
+        case "form_password_same_as_current":
+          toast.error("Mật khẩu mới phải khác mật khẩu hiện tại");
+          break;
+        case "session_missing":
+        case "session_invalid":
+          toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại");
+          router.push("/sign-in");
+          break;
+        default:
+          toast.error(errorMessage || "Không thể đổi mật khẩu. Vui lòng thử lại sau");
+      }
     } finally {
       setIsChangingPassword(false);
     }
@@ -210,6 +280,25 @@ export const AccountModal = () => {
                     <p className="text-sm text-muted-foreground">{user?.emailAddresses[0]?.emailAddress}</p>
                   </div>
                 </div>
+                
+                {/* Avatar Upload */}
+                <div className="space-y-2 mb-4">
+                  <Label>Ảnh đại diện</Label>
+                  <SingleImageDropzone
+                    width={200}
+                    height={200}
+                    value={avatarFile || user?.imageUrl}
+                    onChange={handleAvatarUpload}
+                    disabled={isUploadingAvatar}
+                    dropzoneOptions={{
+                      maxSize: 5 * 1024 * 1024, // 5MB
+                    }}
+                  />
+                  {isUploadingAvatar && (
+                    <p className="text-sm text-muted-foreground">Đang tải lên...</p>
+                  )}
+                </div>
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">Họ</Label>
@@ -230,22 +319,11 @@ export const AccountModal = () => {
                     />
                   </div>
                 </div>
-                <div className="space-y-2 mt-4">
-                  <Label htmlFor="phone">Số điện thoại</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="0123456789"
-                  />
-                </div>
                 <Button
                   onClick={handleUpdateProfile}
                   disabled={isUpdatingProfile || (
                     firstName === user?.firstName && 
-                    lastName === user?.lastName &&
-                    phone === (user.phoneNumbers.find(p => p.id === user.primaryPhoneNumberId)?.phoneNumber || user.phoneNumbers[0]?.phoneNumber || "")
+                    lastName === user?.lastName
                   )}
                   className="mt-4"
                 >

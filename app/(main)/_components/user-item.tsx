@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SignOutButton, useUser } from "@clerk/clerk-react";
+import { SignOutButton, useUser, useClerk } from "@clerk/clerk-react";
 import { ChevronsLeftRight, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -16,12 +16,21 @@ import { useSettings } from "@/hooks/use-settings";
 
 export const UserItem = () => {
   const { user } = useUser();
+  const { signOut } = useClerk();
   const router = useRouter();
   const settings = useSettings();
 
-  const handleSignOut = () => {
-    toast.success("Đăng xuất thành công");
-    router.push("/");
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast.success("Đăng xuất thành công");
+      // Force redirect và reload để đảm bảo về landing page ngay
+      window.location.href = "/";
+    } catch (error) {
+      toast.error("Không thể đăng xuất");
+      // Vẫn redirect ngay cả khi có lỗi
+      window.location.href = "/";
+    }
   };
 
   return (

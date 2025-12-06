@@ -34,9 +34,12 @@ export const Navbar = () => {
     try {
       await signOut();
       toast.success("Đăng xuất thành công");
-      router.push("/");
+      // Force redirect và reload để đảm bảo về landing page ngay
+      window.location.href = "/";
     } catch (error) {
       toast.error("Không thể đăng xuất");
+      // Vẫn redirect ngay cả khi có lỗi
+      window.location.href = "/";
     }
   };
 
