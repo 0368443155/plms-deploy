@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { ModeToggle } from "@/components/mode-toggle";
 import { useAccountModal } from "@/hooks/use-account-modal";
-import { useUser, useClerk } from "@clerk/clerk-react";
+import { useUser } from "@clerk/clerk-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,13 +15,11 @@ import { Spinner } from "@/components/spinner";
 import { User, Shield, Mail, Link as LinkIcon, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { SingleImageDropzone } from "@/components/single-image-dropzone";
-import { useEdgeStore } from "@/lib/edgestore";
 
 export const AccountModal = () => {
   const accountModal = useAccountModal();
   const { user, isLoaded: isUserLoaded } = useUser();
   const router = useRouter();
-  const { edgestore } = useEdgeStore();
   const [activeTab, setActiveTab] = useState("account");
   
   // Profile state
@@ -72,23 +70,14 @@ export const AccountModal = () => {
     
     setIsUploadingAvatar(true);
     try {
-      // Upload to EdgeStore
-      const res = await edgestore.publicFiles.upload({
-        file,
-        options: {
-          replaceTargetUrl: user.imageUrl || undefined,
-        },
-      });
-      
-      // Update Clerk user with new image URL
-      await user.update({
-        imageUrl: res.url,
-      });
+      // Upload avatar trực tiếp lên Clerk sử dụng Clerk API
+      await user.setProfileImage({ file });
       
       toast.success("Đã cập nhật ảnh đại diện");
       setAvatarFile(undefined);
       router.refresh();
     } catch (error: any) {
+      console.error("Avatar upload error:", error);
       toast.error(error?.errors?.[0]?.message || "Không thể cập nhật ảnh đại diện");
     } finally {
       setIsUploadingAvatar(false);
