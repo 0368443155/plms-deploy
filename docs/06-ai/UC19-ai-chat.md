@@ -1,680 +1,685 @@
-# UC19 - Hỏi đáp với AI
+# UC19 - HỎI ĐÁP AI (AI CHAT)
 
-## 1. Thông tin cơ bản
+## 1. THÔNG TIN CƠ BẢN
 
-| Thuộc tính | Giá trị |
-|------------|---------|
-| **ID** | UC19 |
-| **Tên** | Hỏi đáp với AI (AI Chat/Q&A) |
-| **Mô tả** | Người dùng chat với AI assistant (Google Gemini) để hỏi đáp về nội dung document, giải thích khái niệm, hoặc brainstorming ý tưởng |
-| **Actor** | Người dùng đã đăng nhập |
-| **Precondition** | - Người dùng đã đăng nhập<br>- Document tồn tại (optional)<br>- GEMINI_API_KEY configured |
-| **Postcondition** | - Chat history được lưu<br>- Response từ AI hiển thị<br>- Context được maintain |
-| **Độ ưu tiên** | 🟢 Thấp (Nice to have) |
-| **Trạng thái** | ❌ Cần triển khai |
-| **Sprint** | Sprint 7 (Week 8) |
-
----
-
-## 2. Luồng xử lý
-
-### 2.1 Luồng chính (Main Flow)
-
-1. Người dùng đang xem document
-2. Người dùng click "Chat with AI" button (💬 icon)
-3. Hệ thống hiển thị chat sidebar/modal:
-   - Chat history (nếu có)
-   - Input box
-   - Send button
-4. Người dùng type câu hỏi
-5. Người dùng click "Send" hoặc press Enter
-6. Message được thêm vào chat history (user message)
-7. Hiển thị "AI is typing..." indicator
-8. Gọi `sendMessage` mutation với:
-   - Message text
-   - Document ID (for context)
-   - Chat session ID
-9. **AI Chat logic:**
-   - Get document content (for context)
-   - Get chat history (last 10 messages)
-   - Build prompt với context
-   - Call Google Gemini API
-   - Stream response (optional)
-10. AI response được insert vào chat history
-11. Hiển thị response trong chat UI
-12. "Typing" indicator biến mất
-13. User có thể tiếp tục hỏi
-14. Use case tiếp tục (conversational)
-
-### 2.2 Luồng thay thế (Alternative Flows)
-
-**A1: Chat without document context**
-- Tại bước 8: No document ID
-- General Q&A mode
-- No document context in prompt
-- AI answers based on general knowledge
-
-**A2: Copy AI response**
-- Tại bước 11: Hover response → "Copy" button
-- Click to copy
-- Toast: "Copied!"
-
-**A3: Insert response into document**
-- Tại bước 11: Click "Insert"
-- Insert AI response vào document
-- At cursor position
-- Close chat
-
-**A4: Regenerate response**
-- Tại bước 11: Click "Regenerate"
-- Delete last AI message
-- Resend last user message
-- Get new response
-
-**A5: Clear chat history**
-- Tại bước 3: Click "Clear history"
-- Confirm action
-- Delete all messages in session
-- Fresh start
-
-**A6: Example prompts**
-- Tại bước 3: Show suggested prompts:
-  - "Explain this concept"
-  - "Summarize this section"
-  - "Give me examples"
-  - "Create a quiz"
-- Click prompt → Auto-fill input
-
-**A7: Multi-turn conversation**
-- Tại bước 13: User asks follow-up
-- AI maintains context from previous messages
-- Coherent conversation
-
-### 2.3 Luồng ngoại lệ (Exception Flows)
-
-**E1: Empty message**
-- Tại bước 5: Message is empty
-- Disable send button
-- No API call
-
-**E2: API error**
-- Tại bước 9: Gemini API failed
-- Show error message in chat
-- "Sorry, I encountered an error"
-- Retry button
-
-**E3: API key missing**
-- Tại bước 9: GEMINI_API_KEY not set
-- Show error: "AI chat not available"
-- Contact admin
-
-**E4: Rate limit**
-- Tại bước 9: Too many requests
-- Show error: "Too many messages. Wait a moment"
-- Disable input for 1 minute
-
-**E5: Network error**
-- Tại bước 9: Connection lost
-- Show error: "Connection lost"
-- Message queued
-- Retry when online
-
-**E6: Message too long**
-- Tại bước 5: Message > 1000 chars
-- Show warning
-- Truncate or prevent send
+- **Mã UC:** UC19
+- **Tên:** Hỏi đáp AI về nội dung trang
+- **Mô tả:** Chat với AI để hỏi về nội dung document, nhận giải thích, gợi ý
+- **Actor:** User (Authenticated)
+- **Precondition:** 
+  - User đã đăng nhập
+  - Document có nội dung
+  - Gemini API key đã được cấu hình
+- **Postcondition:** Chat history được lưu
+- **Trạng thái:** ❌ Chưa triển khai
+- **Ưu tiên:** 🟢 THẤP
+- **Thời gian ước tính:** 1 tuần
+- **Dependencies:** 
+  - ✅ Authentication (UC01-UC06)
+  - ✅ Documents (UC07-UC13)
+  - ✅ UC18 (AI Summary) - Có thể dùng chung Gemini setup
+- **Tech Stack:** Convex, Google Gemini API, React, TypeScript, Streaming
 
 ---
 
-## 3. Biểu đồ hoạt động
+## 2. LUỒNG XỬ LÝ
+
+### Main Flow: Chat với AI
+
+1. User mở document
+2. System hiển thị nút "Hỏi AI"
+3. User click nút "Hỏi AI"
+4. System hiển thị chat interface (sidebar hoặc modal)
+5. System load chat history (nếu có)
+6. User nhập câu hỏi
+7. User click "Gửi" hoặc Enter
+8. System gửi câu hỏi + document context đến Gemini API
+9. System stream response từ API
+10. System hiển thị response real-time
+11. System lưu chat message vào database
+12. User có thể tiếp tục hỏi
+
+### Alternative Flow 1: New conversation
+
+5a. User click "Cuộc trò chuyện mới"
+6a. System clear chat history
+7a. Continue từ step 6
+
+### Alternative Flow 2: Suggested questions
+
+5a. System hiển thị suggested questions
+6a. User click suggested question
+7a. Continue từ step 8
+
+### Exception Flow
+
+- 8a. Nếu API error → Show error message
+- 8b. Nếu API rate limit → Show "Vui lòng thử lại sau"
+- 8c. Nếu network error → Retry with exponential backoff
+- *. Nếu unauthorized → Redirect to login
+
+---
+
+## 3. BIỂU ĐỒ HOẠT ĐỘNG
 
 ```
-┌─────────┐          ┌──────────┐          ┌────────┐          ┌─────────┐
-│  User   │          │  System  │          │ Convex │          │ Gemini  │
-└────┬────┘          └─────┬────┘          └───┬────┘          └────┬────┘
-     │                     │                   │                     │
-     │  1. Click "Chat"    │                   │                     │
-     ├────────────────────>│                   │                     │
-     │                     │                   │                     │
-     │  2. Show chat UI    │                   │                     │
-     │<────────────────────┤                   │                     │
-     │                     │                   │                     │
-     │  3. Type message    │                   │                     │
-     ├────────────────────>│                   │                     │
-     │                     │                   │                     │
-     │  4. Click "Send"    │                   │                     │
-     ├────────────────────>│                   │                     │
-     │                     │                   │                     │
-     │                     │  5. Send message  │                     │
-     │                     ├──────────────────>│                     │
-     │                     │                   │                     │
-     │                     │  6. Get context   │                     │
-     │                     │     (doc + hist)  │                     │
-     │                     │                   │                     │
-     │                     │  7. Build prompt  │                     │
-     │                     │                   │                     │
-     │                     │  8. Call Gemini   │                     │
-     │                     ├─────────────────────────────────────────>│
-     │                     │                   │                     │
-     │                     │  9. Response      │                     │
-     │                     │<─────────────────────────────────────────┤
-     │                     │                   │                     │
-     │                     │  10. Save msg     │                     │
-     │                     │                   │                     │
-     │  11. Show response  │                   │                     │
-     │<────────────────────┤                   │                     │
-     │                     │                   │                     │
-     │  12. Continue chat  │                   │                     │
-     ├────────────────────>│                   │                     │
-     │                     │                   │                     │
+[User] → [Open Chat] → [Load History] → [Type Question] → [Send]
+                                                              ↓
+                                                    [Add Context] → [Call Gemini API]
+                                                                          ↓
+                                                                    [Stream Response]
+                                                                          ↓
+                                                                    [Display + Save]
+                                                                          ↓
+                                                                    [Continue Chat]
 ```
 
 ---
 
-## 4. Database Schema
+## 4. DATABASE SCHEMA
 
-### 4.1 Chat Sessions Table
+### 4.1. AI Chats Table
 
 ```typescript
 // convex/schema.ts
-chatSessions: defineTable({
-  userId: v.string(),
-  documentId: v.optional(v.id("documents")),
-  title: v.string(),                // Auto-generated from first message
-  createdAt: v.number(),
-  updatedAt: v.number(),
-})
-  .index("by_user", ["userId"])
-  .index("by_document", ["documentId"]),
+export default defineSchema({
+  // ... existing tables ...
+  
+  aiChats: defineTable({
+    documentId: v.id("documents"),       // Link to document
+    userId: v.string(),                  // Owner
+    conversationId: v.string(),          // Group messages by conversation
+    role: v.string(),                    // "user" | "assistant"
+    content: v.string(),                 // Message content
+    model: v.string(),                   // AI model used
+    tokenCount: v.optional(v.number()),  // Tokens used
+    createdAt: v.number(),
+  })
+    .index("by_document", ["documentId"])
+    .index("by_user", ["userId"])
+    .index("by_conversation", ["conversationId"])
+    .index("by_document_conversation", ["documentId", "conversationId"]),
+});
 ```
 
-### 4.2 Chat Messages Table
+### 4.2. Tương thích với Documents
 
-```typescript
-chatMessages: defineTable({
-  sessionId: v.id("chatSessions"),
-  userId: v.string(),
-  role: v.string(),                 // "user" | "assistant"
-  content: v.string(),
-  createdAt: v.number(),
-})
-  .index("by_session", ["sessionId"])
-  .index("by_session_created", ["sessionId", "createdAt"]),
-```
+- ✅ Link với documents qua documentId
+- ✅ Conversation history per document
+- ✅ Không ảnh hưởng đến documents table
 
 ---
 
-## 5. API Endpoints
+## 5. API ENDPOINTS
 
-### 5.1 Chat Mutations
+### 5.1. Chat with AI (Streaming)
 
 ```typescript
-// convex/chat.ts
+// convex/ai.ts
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { action, internalMutation, internalQuery } from "./_generated/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import crypto from "crypto";
 
-export const createSession = mutation({
+export const chatWithAI = action({
   args: {
-    documentId: v.optional(v.id("documents")),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject;
-
-    const sessionId = await ctx.db.insert("chatSessions", {
-      userId,
-      documentId: args.documentId,
-      title: "New Chat",
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-
-    return sessionId;
-  },
-});
-
-export const sendMessage = mutation({
-  args: {
-    sessionId: v.id("chatSessions"),
+    documentId: v.id("documents"),
+    conversationId: v.optional(v.string()),
     message: v.string(),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
+    if (!identity) throw new Error("Not authenticated");
+    
     const userId = identity.subject;
-
-    // Validate session
-    const session = await ctx.db.get(args.sessionId);
-
-    if (!session) {
-      throw new Error("Session not found");
-    }
-
-    if (session.userId !== userId) {
+    
+    // Get document
+    const document = await ctx.runQuery(internal.documents.getById, {
+      documentId: args.documentId,
+    });
+    
+    if (!document || document.userId !== userId) {
       throw new Error("Unauthorized");
     }
-
+    
+    // Generate or use existing conversation ID
+    const conversationId = args.conversationId || crypto.randomUUID();
+    
+    // Get conversation history
+    const history = await ctx.runQuery(internal.ai.getChatHistory, {
+      documentId: args.documentId,
+      conversationId,
+    });
+    
+    // Extract document content as context
+    const documentContext = extractPlainText(document.content);
+    
+    // Build conversation for Gemini
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    
+    // Create chat with history
+    const chat = model.startChat({
+      history: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `Đây là nội dung tài liệu:\n\n${documentContext}\n\nHãy trả lời các câu hỏi dựa trên nội dung này.`,
+            },
+          ],
+        },
+        {
+          role: "model",
+          parts: [
+            {
+              text: "Tôi đã hiểu nội dung tài liệu. Bạn có thể hỏi tôi bất kỳ câu hỏi nào về nội dung này.",
+            },
+          ],
+        },
+        ...history.map((msg) => ({
+          role: msg.role === "user" ? "user" : "model",
+          parts: [{ text: msg.content }],
+        })),
+      ],
+    });
+    
     // Save user message
-    await ctx.db.insert("chatMessages", {
-      sessionId: args.sessionId,
+    await ctx.runMutation(internal.ai.saveChatMessage, {
+      documentId: args.documentId,
       userId,
+      conversationId,
       role: "user",
       content: args.message,
-      createdAt: Date.now(),
+      model: "gemini-pro",
     });
-
-    // Get chat history
-    const history = await ctx.db
-      .query("chatMessages")
-      .withIndex("by_session_created", (q) =>
-        q.eq("sessionId", args.sessionId)
-      )
-      .order("desc")
-      .take(10);
-
-    // Get document context if available
-    let documentContext = "";
-    if (session.documentId) {
-      const document = await ctx.db.get(session.documentId);
-      if (document?.content) {
-        const plainText = extractPlainText(document.content);
-        documentContext = plainText.substring(0, 2000); // Limit context
-      }
-    }
-
-    // Build prompt
-    const prompt = buildPrompt(args.message, history.reverse(), documentContext);
-
-    // Call Gemini API
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY not configured");
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
+    
     try {
-      const result = await model.generateContent(prompt);
+      // Send message and get response
+      const result = await chat.sendMessage(args.message);
       const response = await result.response;
-      const aiMessage = response.text();
-
-      // Save AI response
-      await ctx.db.insert("chatMessages", {
-        sessionId: args.sessionId,
+      const text = response.text();
+      
+      // Save assistant message
+      await ctx.runMutation(internal.ai.saveChatMessage, {
+        documentId: args.documentId,
         userId,
+        conversationId,
         role: "assistant",
-        content: aiMessage,
-        createdAt: Date.now(),
+        content: text,
+        model: "gemini-pro",
       });
-
-      // Update session title if first message
-      if (history.length === 0) {
-        const title = args.message.substring(0, 50);
-        await ctx.db.patch(args.sessionId, {
-          title,
-          updatedAt: Date.now(),
-        });
-      }
-
-      return aiMessage;
+      
+      return {
+        conversationId,
+        response: text,
+        model: "gemini-pro",
+      };
     } catch (error: any) {
-      console.error("Gemini API error:", error);
-      throw new Error(`AI chat failed: ${error.message}`);
+      console.error("Gemini chat error:", error);
+      
+      if (error.message?.includes("quota")) {
+        throw new Error("API quota exceeded. Please try again later.");
+      }
+      
+      throw new Error("Failed to get response. Please try again.");
     }
   },
 });
 
-// Helper functions
-function buildPrompt(
-  userMessage: string,
-  history: any[],
-  documentContext: string
-): string {
-  let prompt = "";
-
-  // Add document context
-  if (documentContext) {
-    prompt += `Context from document:\n${documentContext}\n\n`;
-  }
-
-  // Add chat history
-  if (history.length > 0) {
-    prompt += "Previous conversation:\n";
-    for (const msg of history) {
-      prompt += `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}\n`;
-    }
-    prompt += "\n";
-  }
-
-  // Add current message
-  prompt += `User: ${userMessage}\n\nAssistant:`;
-
-  return prompt;
-}
-
-function extractPlainText(content?: string): string {
-  // Same as UC18
+// Helper function (same as UC18)
+function extractPlainText(content: string | undefined): string {
   if (!content) return "";
+  
   try {
     const blocks = JSON.parse(content);
-    let text = "";
-    const extractFromBlock = (block: any) => {
-      if (block.content) {
-        for (const item of block.content) {
-          if (item.type === "text" && item.text) {
-            text += item.text + " ";
-          }
+    if (!Array.isArray(blocks)) return "";
+    
+    return blocks
+      .map((block: any) => {
+        if (block.type === "paragraph" || block.type === "heading") {
+          return block.content?.map((c: any) => c.text || "").join("") || "";
         }
-      }
-      if (block.children) {
-        for (const child of block.children) {
-          extractFromBlock(child);
-        }
-      }
-    };
-    for (const block of blocks) {
-      extractFromBlock(block);
-    }
-    return text.trim();
+        return "";
+      })
+      .filter((text: string) => text.trim().length > 0)
+      .join("\n");
   } catch (error) {
     return "";
   }
 }
 ```
 
-### 5.2 Chat Queries
+### 5.2. Get Chat History (Internal)
 
 ```typescript
-// convex/chat.ts
-export const getMessages = query({
-  args: { sessionId: v.id("chatSessions") },
+export const getChatHistory = internalQuery({
+  args: {
+    documentId: v.id("documents"),
+    conversationId: v.string(),
+  },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const userId = identity.subject;
-
-    const session = await ctx.db.get(args.sessionId);
-
-    if (!session) {
-      throw new Error("Session not found");
-    }
-
-    if (session.userId !== userId) {
-      throw new Error("Unauthorized");
-    }
-
     const messages = await ctx.db
-      .query("chatMessages")
-      .withIndex("by_session_created", (q) =>
-        q.eq("sessionId", args.sessionId)
+      .query("aiChats")
+      .withIndex("by_document_conversation", (q) =>
+        q.eq("documentId", args.documentId).eq("conversationId", args.conversationId)
       )
       .order("asc")
       .collect();
-
+    
     return messages;
   },
 });
+```
 
-export const getSessions = query({
-  handler: async (ctx) => {
+### 5.3. Save Chat Message (Internal)
+
+```typescript
+export const saveChatMessage = internalMutation({
+  args: {
+    documentId: v.id("documents"),
+    userId: v.string(),
+    conversationId: v.string(),
+    role: v.string(),
+    content: v.string(),
+    model: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const messageId = await ctx.db.insert("aiChats", {
+      documentId: args.documentId,
+      userId: args.userId,
+      conversationId: args.conversationId,
+      role: args.role,
+      content: args.content,
+      model: args.model,
+      createdAt: Date.now(),
+    });
+    
+    return messageId;
+  },
+});
+```
+
+### 5.4. Get Conversations
+
+```typescript
+export const getConversations = query({
+  args: { documentId: v.id("documents") },
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
+    if (!identity) throw new Error("Not authenticated");
+    
     const userId = identity.subject;
+    
+    // Get all messages for this document
+    const messages = await ctx.db
+      .query("aiChats")
+      .withIndex("by_document", (q) => q.eq("documentId", args.documentId))
+      .filter((q) => q.eq(q.field("userId"), userId))
+      .collect();
+    
+    // Group by conversationId
+    const conversations = new Map<string, any>();
+    
+    messages.forEach((msg) => {
+      if (!conversations.has(msg.conversationId)) {
+        conversations.set(msg.conversationId, {
+          conversationId: msg.conversationId,
+          messages: [],
+          createdAt: msg.createdAt,
+        });
+      }
+      
+      conversations.get(msg.conversationId)!.messages.push(msg);
+    });
+    
+    return Array.from(conversations.values()).sort(
+      (a, b) => b.createdAt - a.createdAt
+    );
+  },
+});
+```
 
-    const sessions = await ctx.db
-      .query("chatSessions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .order("desc")
-      .take(20);
+### 5.5. Delete Conversation
 
-    return sessions;
+```typescript
+export const deleteConversation = mutation({
+  args: { conversationId: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    
+    const userId = identity.subject;
+    
+    const messages = await ctx.db
+      .query("aiChats")
+      .withIndex("by_conversation", (q) => q.eq("conversationId", args.conversationId))
+      .filter((q) => q.eq(q.field("userId"), userId))
+      .collect();
+    
+    await Promise.all(messages.map((msg) => ctx.db.delete(msg._id)));
   },
 });
 ```
 
 ---
 
-## 6. UI Components
+## 6. UI COMPONENTS
 
-### 6.1 Component Tree
+### 6.1. Component Structure
 
 ```
 components/ai/
-├── chat-button.tsx                 # Trigger button
-├── chat-sidebar.tsx                # Chat UI
-├── chat-message.tsx                # Single message
-├── chat-input.tsx                  # Input box
-└── typing-indicator.tsx            # "AI is typing..."
+├── chat-button.tsx             # Trigger button
+├── chat-interface.tsx          # Main chat UI
+├── chat-message.tsx            # Individual message
+├── chat-input.tsx              # Message input
+└── suggested-questions.tsx     # Suggested questions
 ```
 
-### 6.2 Chat Sidebar
+### 6.2. ChatButton Component
 
 ```typescript
-// components/ai/chat-sidebar.tsx
+// components/ai/chat-button.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
-import { ChatMessage } from "./chat-message";
-import { ChatInput } from "./chat-input";
-import { TypingIndicator } from "./typing-indicator";
 import { Button } from "@/components/ui/button";
-import { X, Trash2 } from "lucide-react";
-import { toast } from "sonner";
+import { MessageSquare } from "lucide-react";
+import { useState } from "react";
+import { ChatInterface } from "./chat-interface";
+import { Id } from "@/convex/_generated/dataModel";
 
-interface ChatSidebarProps {
-  documentId?: Id<"documents">;
-  onClose: () => void;
+interface ChatButtonProps {
+  documentId: Id<"documents">;
 }
 
-export const ChatSidebar = ({ documentId, onClose }: ChatSidebarProps) => {
-  const [sessionId, setSessionId] = useState<Id<"chatSessions"> | null>(null);
-  const [isTyping, setIsTyping] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const createSession = useMutation(api.chat.createSession);
-  const sendMessage = useMutation(api.chat.sendMessage);
-  const messages = useQuery(
-    api.chat.getMessages,
-    sessionId ? { sessionId } : "skip"
-  );
-
-  useEffect(() => {
-    // Create session on mount
-    createSession({ documentId }).then(setSessionId);
-  }, []);
-
-  useEffect(() => {
-    // Auto-scroll to bottom
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const handleSend = async (message: string) => {
-    if (!sessionId) return;
-
-    setIsTyping(true);
-
-    try {
-      await sendMessage({ sessionId, message });
-    } catch (error: any) {
-      console.error("Send message error:", error);
-      toast.error("Failed to send message");
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
+export const ChatButton = ({ documentId }: ChatButtonProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  
   return (
-    <div className="fixed right-0 top-0 h-full w-96 bg-background border-l shadow-lg flex flex-col z-50">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-2">
-          <span className="text-lg font-semibold">💬 AI Chat</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages?.map((message) => (
-          <ChatMessage key={message._id} message={message} />
-        ))}
-        {isTyping && <TypingIndicator />}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input */}
-      <div className="p-4 border-t">
-        <ChatInput onSend={handleSend} disabled={isTyping} />
-      </div>
-    </div>
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setIsOpen(true)}
+        className="gap-2"
+      >
+        <MessageSquare className="h-4 w-4" />
+        Hỏi AI
+      </Button>
+      
+      <ChatInterface
+        documentId={documentId}
+        open={isOpen}
+        onClose={() => setIsOpen(false)}
+      />
+    </>
   );
 };
 ```
 
-### 6.3 Chat Message
+### 6.3. ChatInterface Component
+
+```typescript
+// components/ai/chat-interface.tsx
+"use client";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useQuery, useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { useState, useRef, useEffect } from "react";
+import { ChatMessage } from "./chat-message";
+import { ChatInput } from "./chat-input";
+import { SuggestedQuestions } from "./suggested-questions";
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
+import { toast } from "sonner";
+import crypto from "crypto";
+
+interface ChatInterfaceProps {
+  documentId: Id<"documents">;
+  open: boolean;
+  onClose: () => void;
+}
+
+export const ChatInterface = ({ documentId, open, onClose }: ChatInterfaceProps) => {
+  const conversations = useQuery(api.ai.getConversations, { documentId });
+  const chatWithAI = useAction(api.ai.chatWithAI);
+  
+  const [currentConversationId, setCurrentConversationId] = useState<string>("");
+  const [messages, setMessages] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    if (conversations && conversations.length > 0 && !currentConversationId) {
+      const latest = conversations[0];
+      setCurrentConversationId(latest.conversationId);
+      setMessages(latest.messages);
+    }
+  }, [conversations]);
+  
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+  
+  const handleSendMessage = async (message: string) => {
+    if (!message.trim()) return;
+    
+    // Add user message to UI immediately
+    const userMessage = {
+      role: "user",
+      content: message,
+      createdAt: Date.now(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    
+    setIsLoading(true);
+    
+    try {
+      const result = await chatWithAI({
+        documentId,
+        conversationId: currentConversationId || undefined,
+        message,
+      });
+      
+      // Update conversation ID if new
+      if (!currentConversationId) {
+        setCurrentConversationId(result.conversationId);
+      }
+      
+      // Add assistant message
+      const assistantMessage = {
+        role: "assistant",
+        content: result.response,
+        createdAt: Date.now(),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error: any) {
+      console.error("Chat error:", error);
+      toast.error(error.message || "Không thể gửi tin nhắn");
+      
+      // Remove user message on error
+      setMessages((prev) => prev.slice(0, -1));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleNewConversation = () => {
+    setCurrentConversationId("");
+    setMessages([]);
+  };
+  
+  const handleSuggestedQuestion = (question: string) => {
+    handleSendMessage(question);
+  };
+  
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-blue-500" />
+              Hỏi đáp AI
+            </DialogTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNewConversation}
+            >
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Cuộc trò chuyện mới
+            </Button>
+          </div>
+        </DialogHeader>
+        
+        <div className="flex-1 overflow-y-auto space-y-4 py-4">
+          {messages.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center">
+              <MessageSquare className="h-16 w-16 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-6">
+                Hỏi tôi bất kỳ điều gì về tài liệu này
+              </p>
+              <SuggestedQuestions onSelect={handleSuggestedQuestion} />
+            </div>
+          ) : (
+            <>
+              {messages.map((msg, index) => (
+                <ChatMessage key={index} message={msg} />
+              ))}
+              <div ref={messagesEndRef} />
+            </>
+          )}
+        </div>
+        
+        <ChatInput
+          onSend={handleSendMessage}
+          disabled={isLoading}
+          placeholder="Hỏi về nội dung tài liệu..."
+        />
+      </DialogContent>
+    </Dialog>
+  );
+};
+```
+
+### 6.4. ChatMessage Component
 
 ```typescript
 // components/ai/chat-message.tsx
 "use client";
 
-import { Doc } from "@/convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
-import { User, Bot, Copy } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { User, Bot } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { vi } from "date-fns/locale";
 
 interface ChatMessageProps {
-  message: Doc<"chatMessages">;
+  message: {
+    role: string;
+    content: string;
+    createdAt: number;
+  };
 }
 
 export const ChatMessage = ({ message }: ChatMessageProps) => {
   const isUser = message.role === "user";
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(message.content);
-    toast.success("Copied to clipboard!");
-  };
-
+  
   return (
-    <div
-      className={cn(
-        "flex gap-3",
-        isUser ? "justify-end" : "justify-start"
-      )}
-    >
-      {!isUser && (
-        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
-          <Bot className="h-5 w-5 text-white" />
-        </div>
-      )}
-
+    <div className={cn("flex gap-3", isUser && "flex-row-reverse")}>
       <div
         className={cn(
-          "max-w-[80%] rounded-lg p-3 group relative",
-          isUser
-            ? "bg-primary text-primary-foreground"
-            : "bg-muted"
+          "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
+          isUser ? "bg-blue-500" : "bg-purple-500"
         )}
       >
-        <div className="whitespace-pre-wrap break-words">
-          {message.content}
-        </div>
-
-        {!isUser && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute -right-10 top-2 opacity-0 group-hover:opacity-100 transition"
-            onClick={handleCopy}
-          >
-            <Copy className="h-4 w-4" />
-          </Button>
+        {isUser ? (
+          <User className="h-4 w-4 text-white" />
+        ) : (
+          <Bot className="h-4 w-4 text-white" />
         )}
       </div>
-
-      {isUser && (
-        <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-          <User className="h-5 w-5 text-primary-foreground" />
+      
+      <div className={cn("flex-1 space-y-1", isUser && "flex flex-col items-end")}>
+        <div
+          className={cn(
+            "rounded-lg p-3 max-w-[80%]",
+            isUser
+              ? "bg-blue-500 text-white"
+              : "bg-gray-100 dark:bg-gray-800"
+          )}
+        >
+          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
         </div>
-      )}
+        <p className="text-xs text-muted-foreground px-1">
+          {formatDistanceToNow(new Date(message.createdAt), {
+            addSuffix: true,
+            locale: vi,
+          })}
+        </p>
+      </div>
     </div>
   );
 };
 ```
 
-### 6.4 Chat Input
+### 6.5. ChatInput Component
 
 ```typescript
 // components/ai/chat-input.tsx
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send } from "lucide-react";
+import { useState, KeyboardEvent } from "react";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
   disabled?: boolean;
+  placeholder?: string;
 }
 
-export const ChatInput = ({ onSend, disabled }: ChatInputProps) => {
+export const ChatInput = ({ onSend, disabled, placeholder }: ChatInputProps) => {
   const [message, setMessage] = useState("");
-
+  
   const handleSend = () => {
-    if (!message.trim()) return;
-    onSend(message);
-    setMessage("");
+    if (message.trim() && !disabled) {
+      onSend(message.trim());
+      setMessage("");
+    }
   };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
-
+  
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 border-t pt-4">
       <Textarea
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Ask me anything..."
+        placeholder={placeholder || "Nhập tin nhắn..."}
         disabled={disabled}
-        className="resize-none"
-        rows={3}
+        className="min-h-[60px] max-h-[120px] resize-none"
       />
       <Button
         onClick={handleSend}
         disabled={disabled || !message.trim()}
         size="icon"
+        className="shrink-0"
       >
         <Send className="h-4 w-4" />
       </Button>
@@ -683,96 +688,163 @@ export const ChatInput = ({ onSend, disabled }: ChatInputProps) => {
 };
 ```
 
----
+### 6.6. SuggestedQuestions Component
 
-## 7. Validation Rules
+```typescript
+// components/ai/suggested-questions.tsx
+"use client";
 
-### 7.1 Message Validation
+import { Button } from "@/components/ui/button";
 
-| Rule | Check | Error |
-|------|-------|-------|
-| Not empty | Length > 0 | Disable send |
-| Max length | <= 1000 chars | Truncate/warn |
+interface SuggestedQuestionsProps {
+  onSelect: (question: string) => void;
+}
 
----
+const SUGGESTED_QUESTIONS = [
+  "Tóm tắt nội dung chính của tài liệu này",
+  "Những điểm quan trọng nhất là gì?",
+  "Giải thích chi tiết hơn về...",
+  "Có ví dụ nào không?",
+];
 
-## 8. Error Handling
-
-### 8.1 Error Cases
-
-| Error | Message | Action |
-|-------|---------|--------|
-| Empty message | - | Disable send button |
-| API error | "Failed to send" | Retry button |
-| API key missing | "Chat not available" | Show error |
-| Rate limit | "Too many messages" | Wait 1 minute |
-| Network error | "Connection lost" | Queue message |
-
----
-
-## 9. Test Cases
-
-### 9.1 Functional Tests
-
-| Test ID | Scenario | Expected Result |
-|---------|----------|-----------------|
-| TC19-01 | Send message | AI responds |
-| TC19-02 | Multi-turn chat | Context maintained |
-| TC19-03 | Copy response | Copied to clipboard |
-| TC19-04 | Chat with document | Context-aware answers |
-| TC19-05 | Clear history | All messages deleted |
-| TC19-06 | API error | Error shown |
-
----
-
-## 10. Code Examples
-
-Đã bao gồm đầy đủ trong section 6.
+export const SuggestedQuestions = ({ onSelect }: SuggestedQuestionsProps) => {
+  return (
+    <div className="space-y-2 w-full max-w-md">
+      <p className="text-sm text-muted-foreground text-center mb-3">
+        Câu hỏi gợi ý:
+      </p>
+      <div className="grid grid-cols-1 gap-2">
+        {SUGGESTED_QUESTIONS.map((question, index) => (
+          <Button
+            key={index}
+            variant="outline"
+            className="justify-start text-left h-auto py-3"
+            onClick={() => onSelect(question)}
+          >
+            {question}
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+};
+```
 
 ---
 
-## 11. Security Considerations
+## 7. VALIDATION RULES
 
-- ✅ Verify authentication
-- ✅ Check session ownership
-- ✅ Secure API key
-- ✅ Rate limiting
-- ✅ Content moderation (optional)
-
----
-
-## 12. Performance Optimization
-
-- Limit chat history to 10 messages
-- Paginate old messages
-- Stream responses (optional)
-- Cache common questions
+| Field | Rule | Error Message |
+|-------|------|---------------|
+| Message | Required, max 1000 chars | "Tin nhắn không được để trống" |
+| Document | Must exist and owned by user | "Không có quyền truy cập" |
+| API Key | Must be configured | "API key chưa được cấu hình" |
 
 ---
 
-## 13. Related Use Cases
+## 8. ERROR HANDLING
 
-- [UC18 - Tóm tắt AI](./UC18-ai-summary.md)
-- [UC09 - Sửa nội dung](../02-documents/UC09-edit-content.md)
+| Error Code | Condition | Message | Action |
+|------------|-----------|---------|--------|
+| `NOT_AUTHENTICATED` | User not logged in | "Vui lòng đăng nhập" | Redirect to login |
+| `UNAUTHORIZED` | Not document owner | "Bạn không có quyền chat về tài liệu này" | Show error toast |
+| `API_QUOTA_EXCEEDED` | Gemini quota exceeded | "Đã vượt quá giới hạn API. Vui lòng thử lại sau" | Show error toast |
+| `API_ERROR` | Gemini API error | "Không thể gửi tin nhắn. Vui lòng thử lại" | Show error toast |
+| `MESSAGE_TOO_LONG` | Message > 1000 chars | "Tin nhắn quá dài" | Show error toast |
 
 ---
 
-## 14. References
+## 9. TEST CASES
+
+### Functional Tests:
+
+**TC01: Send Message**
+- Input: "Tóm tắt tài liệu này"
+- Expected: AI responds with summary
+- Actual: ⏳ Pending
+
+**TC02: Conversation History**
+- Input: Multiple messages
+- Expected: Context maintained across messages
+- Actual: ⏳ Pending
+
+**TC03: New Conversation**
+- Input: Click "Cuộc trò chuyện mới"
+- Expected: Chat history cleared
+- Actual: ⏳ Pending
+
+---
+
+## 10. CODE EXAMPLES
+
+### 10.1. Chat with AI
+
+```typescript
+const chatWithAI = useAction(api.ai.chatWithAI);
+
+const result = await chatWithAI({
+  documentId: "j57abc123",
+  conversationId: "conv-xyz",
+  message: "Giải thích phần này",
+});
+
+console.log(result.response);
+```
+
+---
+
+## 11. SECURITY CONSIDERATIONS
+
+- ✅ **API Key Security:** Store in environment variables
+- ✅ **Authentication:** Require login
+- ✅ **Authorization:** Verify document ownership
+- ✅ **Rate Limiting:** Limit messages per user
+- ✅ **Content Filtering:** Sanitize user input
+- ✅ **Privacy:** Store chats with userId check
+
+---
+
+## 12. PERFORMANCE OPTIMIZATION
+
+- ✅ **Context Management:** Only send relevant document content
+- ✅ **History Limit:** Max 10 messages in context
+- ✅ **Lazy Loading:** Load conversations on demand
+- ✅ **Cleanup:** Delete old conversations (60 days)
+- ✅ **Streaming:** Stream responses for better UX
+
+---
+
+## 13. COST OPTIMIZATION
+
+### Estimated Cost:
+- 100 users × 20 messages/day × 500 chars = 1M chars/day
+- Cost: $0.25/day = $7.50/month
+
+### Cost Reduction:
+1. ✅ **Context Limit:** Max 5000 chars of document content
+2. ✅ **History Limit:** Max 10 messages in conversation
+3. ✅ **Rate Limiting:** Max 50 messages per user per day
+4. ✅ **Cleanup:** Delete old conversations
+
+---
+
+## 14. RELATED USE CASES
+
+- **UC07:** Tạo trang mới - Source of content
+- **UC09:** Sửa nội dung - Content changes affect context
+- **UC18:** Tóm tắt AI - Can use summary in chat
+
+---
+
+## 15. REFERENCES
 
 - [Google Gemini API](https://ai.google.dev/)
-- [Chat UI Best Practices](https://www.nngroup.com/articles/chatbot-design/)
+- [Gemini Chat API](https://ai.google.dev/docs/gemini_api_overview)
+- [Convex Actions](https://docs.convex.dev/functions/actions)
 
 ---
 
-**Last Updated:** 02/12/2025  
-**Status:** Ready for implementation  
-**Estimated Effort:** 3-4 days  
-**Priority:** Low (Enhancement feature)
-
----
-
-# 🎊 CONGRATULATIONS! 🎊
-
-## ✅ 100% COMPLETE - ALL 19 USE CASES DOCUMENTED!
-
-Bạn đã hoàn thành toàn bộ tài liệu cho dự án Notion Clone!
+**Tạo bởi:** AI Assistant  
+**Ngày:** 08/12/2025  
+**Trạng thái:** Ready for implementation  
+**Ước tính:** 1 tuần

@@ -1,391 +1,338 @@
-# UC18 - Tóm tắt nội dung bằng AI
+# UC18 - TÓM TẮT NỘI DUNG (AI SUMMARY)
 
-## 1. Thông tin cơ bản
+## 1. THÔNG TIN CƠ BẢN
 
-| Thuộc tính | Giá trị |
-|------------|---------|
-| **ID** | UC18 |
-| **Tên** | Tóm tắt nội dung bằng AI (AI Summarization) |
-| **Mô tả** | Người dùng sử dụng Google Gemini AI để tóm tắt nội dung document dài thành các điểm chính |
-| **Actor** | Người dùng đã đăng nhập |
-| **Precondition** | - Người dùng đã đăng nhập<br>- Document có nội dung (>100 characters)<br>- GEMINI_API_KEY configured |
-| **Postcondition** | - Summary được tạo<br>- Summary được cache<br>- Hiển thị trong UI |
-| **Độ ưu tiên** | 🟢 Thấp (Nice to have) |
-| **Trạng thái** | ❌ Cần triển khai |
-| **Sprint** | Sprint 7 (Week 8) |
-
----
-
-## 2. Luồng xử lý
-
-### 2.1 Luồng chính (Main Flow)
-
-1. Người dùng đang xem document
-2. Document có nội dung dài (>500 words)
-3. Người dùng click button "Summarize with AI" (✨ icon)
-4. Hệ thống hiển thị loading state
-5. Gọi `summarizeDocument` mutation với documentId
-6. **AI Summarization logic:**
-   - Get document content
-   - Extract plain text từ BlockNote JSON
-   - Check minimum length (>100 chars)
-   - Check cache (by content hash)
-   - If cached → Return cached summary
-   - If not cached:
-     - Call Google Gemini API
-     - Prompt: "Tóm tắt nội dung sau thành các điểm chính"
-     - Get response
-     - Cache result với content hash
-7. Hệ thống nhận summary từ API
-8. Hiển thị summary trong modal/sidebar:
-   - Bullet points
-   - Key takeaways
-   - Main topics
-9. User có thể:
-   - Copy summary
-   - Insert vào document
-   - Regenerate
-10. Use case kết thúc
-
-### 2.2 Luồng thay thế (Alternative Flows)
-
-**A1: Summary đã được cache**
-- Tại bước 6: Content hash match
-- Return cached summary ngay lập tức
-- Show "Cached" indicator
-- No API call (save cost)
-
-**A2: Copy summary**
-- Tại bước 9: Click "Copy"
-- Copy to clipboard
-- Toast: "Summary copied!"
-
-**A3: Insert into document**
-- Tại bước 9: Click "Insert"
-- Insert summary at cursor position
-- As quote block hoặc heading
-- Close modal
-
-**A4: Regenerate summary**
-- Tại bước 9: Click "Regenerate"
-- Clear cache for this document
-- Call API again
-- Get fresh summary
-- Update cache
-
-**A5: Different summary styles**
-- Tại bước 6: User chọn style
-- Options:
-  - Bullet points (default)
-  - Paragraph
-  - Key points only
-  - Detailed summary
-- Adjust prompt accordingly
-
-**A6: Translate summary**
-- Tại bước 9: Click "Translate"
-- Choose language
-- Call Gemini with translation prompt
-- Show translated summary
-
-### 2.3 Luồng ngoại lệ (Exception Flows)
-
-**E1: Content too short**
-- Tại bước 6: Content < 100 characters
-- Show error: "Content too short to summarize"
-- Suggest: "Add more content first"
-- Don't call API
-
-**E2: API error**
-- Tại bước 6: Gemini API failed
-- Show error: "Failed to generate summary"
-- Retry button
-- Log error
-
-**E3: API key missing**
-- Tại bước 6: GEMINI_API_KEY not set
-- Show error: "AI feature not configured"
-- Contact admin message
-
-**E4: Rate limit exceeded**
-- Tại bước 6: Too many requests
-- Show error: "Too many requests. Try again later"
-- Show countdown timer
-- Use cached summaries
-
-**E5: Network error**
-- Tại bước 6: Connection lost
-- Show error: "Network error"
-- Retry button
-- Check cached version
+- **Mã UC:** UC18
+- **Tên:** Tóm tắt nội dung trang bằng AI
+- **Mô tả:** Sử dụng Google Gemini AI để tóm tắt nội dung document
+- **Actor:** User (Authenticated)
+- **Precondition:** 
+  - User đã đăng nhập
+  - Document có nội dung (min 100 chars)
+  - Gemini API key đã được cấu hình
+- **Postcondition:** Summary được hiển thị và cache
+- **Trạng thái:** ❌ Chưa triển khai
+- **Ưu tiên:** 🟢 THẤP
+- **Thời gian ước tính:** 3-4 ngày
+- **Dependencies:** 
+  - ✅ Authentication (UC01-UC06)
+  - ✅ Documents (UC07-UC13)
+- **Tech Stack:** Convex, Google Gemini API, React, TypeScript
 
 ---
 
-## 3. Biểu đồ hoạt động
+## 2. LUỒNG XỬ LÝ
+
+### Main Flow: Tóm tắt nội dung
+
+1. User mở document
+2. System hiển thị nút "Tóm tắt AI"
+3. User click nút "Tóm tắt AI"
+4. System kiểm tra cache (content hash)
+5. Nếu có cache → Hiển thị summary từ cache
+6. Nếu không có cache:
+   - System extract plain text từ BlockNote content
+   - System gọi Gemini API
+   - System lưu summary vào cache
+   - System hiển thị summary
+7. User có thể copy summary
+
+### Alternative Flow 1: Regenerate summary
+
+6a. User click "Tạo lại"
+7a. System force gọi API (bỏ qua cache)
+8a. Continue từ step 6
+
+### Alternative Flow 2: Content quá ngắn
+
+4a. Nếu content < 100 chars
+5a. System show error "Nội dung quá ngắn để tóm tắt"
+6a. End
+
+### Exception Flow
+
+- 6a. Nếu API error → Show error message
+- 6b. Nếu API rate limit → Show "Vui lòng thử lại sau"
+- 6c. Nếu network error → Retry with exponential backoff
+- *. Nếu unauthorized → Redirect to login
+
+---
+
+## 3. BIỂU ĐỒ HOẠT ĐỘNG
 
 ```
-┌─────────┐          ┌──────────┐          ┌────────┐          ┌─────────┐
-│  User   │          │  System  │          │ Convex │          │ Gemini  │
-└────┬────┘          └─────┬────┘          └───┬────┘          └────┬────┘
-     │                     │                   │                     │
-     │  1. Click           │                   │                     │
-     │  "Summarize"        │                   │                     │
-     ├────────────────────>│                   │                     │
-     │                     │                   │                     │
-     │  2. Show loading    │                   │                     │
-     │<────────────────────┤                   │                     │
-     │                     │                   │                     │
-     │                     │  3. Summarize     │                     │
-     │                     ├──────────────────>│                     │
-     │                     │                   │                     │
-     │                     │  4. Get content   │                     │
-     │                     │                   │                     │
-     │                     │  5. Check cache   │                     │
-     │                     │                   │                     │
-     │                     ▼                   │                     │
-     │                ◇─────────◇              │                     │
-     │               / Cached?   \             │                     │
-     │              ◇─────────────◇            │                     │
-     │              │             │            │                     │
-     │            [Yes]         [No]           │                     │
-     │              │             │            │                     │
-     │              ▼             ▼            │                     │
-     │         ┌─────────┐  ┌──────────────┐  │                     │
-     │         │ Return  │  │ Call Gemini  │  │                     │
-     │         │ cache   │  ├──────────────┤  │                     │
-     │         └────┬────┘  │              │  │                     │
-     │              │       │  6. API call ├─────────────────────────>│
-     │              │       │              │  │                     │
-     │              │       │  7. Response │<─────────────────────────┤
-     │              │       │              │  │                     │
-     │              │       │  8. Cache    │  │                     │
-     │              │       │     result   │  │                     │
-     │              │       └──────┬───────┘  │                     │
-     │              │              │          │                     │
-     │              └──────┬───────┘          │                     │
-     │                     │                  │                     │
-     │                     │  9. Return       │                     │
-     │                     │<─────────────────┤                     │
-     │                     │                  │                     │
-     │  10. Show summary   │                  │                     │
-     │<────────────────────┤                  │                     │
-     │                     │                  │                     │
+[User] → [Click Summarize] → [Check Cache] → [Cache Hit?]
+                                                  ↓ Yes
+                                            [Show Cached Summary]
+                                                  ↓ No
+                                            [Extract Text] → [Call Gemini API] → [Cache Result] → [Show Summary]
+                                                                    ↓ (error)
+                                                              [Show Error]
 ```
 
 ---
 
-## 4. Database Schema
+## 4. DATABASE SCHEMA
 
-### 4.1 AI Summaries Table
+### 4.1. AI Summaries Table
 
 ```typescript
 // convex/schema.ts
-aiSummaries: defineTable({
-  documentId: v.id("documents"),
-  userId: v.string(),
-  summary: v.string(),
-  contentHash: v.string(),          // MD5 hash of content
-  model: v.string(),                // "gemini-pro"
-  tokensUsed: v.optional(v.number()),
-  createdAt: v.number(),
-})
-  .index("by_document", ["documentId"])
-  .index("by_document_hash", ["documentId", "contentHash"])
-  .index("by_user", ["userId"]),
+export default defineSchema({
+  // ... existing tables ...
+  
+  aiSummaries: defineTable({
+    documentId: v.id("documents"),       // Link to document
+    userId: v.string(),                  // Owner
+    summary: v.string(),                 // AI-generated summary
+    contentHash: v.string(),             // Hash of content to detect changes
+    model: v.string(),                   // AI model used (e.g., "gemini-pro")
+    tokenCount: v.optional(v.number()),  // Tokens used
+    createdAt: v.number(),
+  })
+    .index("by_document", ["documentId"])
+    .index("by_user", ["userId"])
+    .index("by_document_hash", ["documentId", "contentHash"]),
+});
 ```
+
+### 4.2. Tương thích với Documents
+
+- ✅ Link với documents qua documentId
+- ✅ Cache invalidation qua contentHash
+- ✅ Không ảnh hưởng đến documents table
 
 ---
 
-## 5. API Endpoints
+## 5. API ENDPOINTS
 
-### 5.1 Summarize Mutation
+### 5.1. Summarize Document
 
 ```typescript
 // convex/ai.ts
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { mutation, query, action } from "./_generated/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import crypto from "crypto";
 
-export const summarizeDocument = mutation({
-  args: { documentId: v.id("documents") },
+export const summarizeDocument = action({
+  args: {
+    documentId: v.id("documents"),
+    forceRegenerate: v.optional(v.boolean()),
+  },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
+    if (!identity) throw new Error("Not authenticated");
+    
     const userId = identity.subject;
-
+    
     // Get document
-    const document = await ctx.db.get(args.documentId);
-
-    if (!document) {
-      throw new Error("Document not found");
-    }
-
-    if (document.userId !== userId) {
+    const document = await ctx.runQuery(internal.documents.getById, {
+      documentId: args.documentId,
+    });
+    
+    if (!document || document.userId !== userId) {
       throw new Error("Unauthorized");
     }
-
-    // Extract plain text from BlockNote JSON
+    
+    // Extract plain text from BlockNote content
     const plainText = extractPlainText(document.content);
-
-    if (plainText.length < 100) {
+    
+    if (!plainText || plainText.length < 100) {
       throw new Error("Content too short to summarize (minimum 100 characters)");
     }
-
-    // Generate content hash
-    const contentHash = crypto
-      .createHash("md5")
-      .update(plainText)
-      .digest("hex");
-
-    // Check cache
-    const cached = await ctx.db
-      .query("aiSummaries")
-      .withIndex("by_document_hash", (q) =>
-        q.eq("documentId", args.documentId).eq("contentHash", contentHash)
-      )
-      .first();
-
-    if (cached) {
-      return {
-        summary: cached.summary,
-        cached: true,
-      };
+    
+    // Calculate content hash
+    const contentHash = hashContent(plainText);
+    
+    // Check cache if not forcing regeneration
+    if (!args.forceRegenerate) {
+      const cached = await ctx.runQuery(internal.ai.getCachedSummary, {
+        documentId: args.documentId,
+        contentHash,
+      });
+      
+      if (cached) {
+        return {
+          summary: cached.summary,
+          fromCache: true,
+          model: cached.model,
+        };
+      }
     }
-
+    
     // Call Gemini API
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY not configured");
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    
+    const prompt = `Hãy tóm tắt nội dung sau một cách ngắn gọn và súc tích (khoảng 3-5 câu):
 
-    const prompt = `Hãy tóm tắt nội dung sau thành các điểm chính (bullet points). Chỉ trả về phần tóm tắt, không cần giải thích thêm:\n\n${plainText}`;
+${plainText}
 
+Tóm tắt:`;
+    
     try {
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const summary = response.text();
-
-      // Cache result
-      await ctx.db.insert("aiSummaries", {
+      
+      // Cache the result
+      await ctx.runMutation(internal.ai.cacheSummary, {
         documentId: args.documentId,
         userId,
         summary,
         contentHash,
         model: "gemini-pro",
-        tokensUsed: response.usageMetadata?.totalTokenCount,
-        createdAt: Date.now(),
       });
-
+      
       return {
         summary,
-        cached: false,
+        fromCache: false,
+        model: "gemini-pro",
       };
     } catch (error: any) {
       console.error("Gemini API error:", error);
-      throw new Error(`AI summarization failed: ${error.message}`);
+      
+      if (error.message?.includes("quota")) {
+        throw new Error("API quota exceeded. Please try again later.");
+      }
+      
+      throw new Error("Failed to generate summary. Please try again.");
     }
   },
 });
 
-// Helper function to extract plain text
-function extractPlainText(content?: string): string {
+// Helper functions
+function extractPlainText(content: string | undefined): string {
   if (!content) return "";
-
+  
   try {
     const blocks = JSON.parse(content);
-    let text = "";
-
-    const extractFromBlock = (block: any) => {
-      if (block.content) {
-        for (const item of block.content) {
-          if (item.type === "text" && item.text) {
-            text += item.text + " ";
-          }
+    
+    if (!Array.isArray(blocks)) return "";
+    
+    return blocks
+      .map((block: any) => {
+        if (block.type === "paragraph" || block.type === "heading") {
+          return block.content?.map((c: any) => c.text || "").join("") || "";
         }
-      }
-      if (block.children) {
-        for (const child of block.children) {
-          extractFromBlock(child);
-        }
-      }
-    };
-
-    for (const block of blocks) {
-      extractFromBlock(block);
-    }
-
-    return text.trim();
+        return "";
+      })
+      .filter((text: string) => text.trim().length > 0)
+      .join("\n");
   } catch (error) {
     return "";
   }
 }
+
+function hashContent(content: string): string {
+  return crypto.createHash("sha256").update(content).digest("hex");
+}
 ```
 
-### 5.2 Clear Cache Mutation
+### 5.2. Get Cached Summary (Internal)
 
 ```typescript
-// convex/ai.ts
-export const clearSummaryCache = mutation({
+export const getCachedSummary = internalQuery({
+  args: {
+    documentId: v.id("documents"),
+    contentHash: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const cached = await ctx.db
+      .query("aiSummaries")
+      .withIndex("by_document_hash", (q) =>
+        q.eq("documentId", args.documentId).eq("contentHash", args.contentHash)
+      )
+      .first();
+    
+    return cached;
+  },
+});
+```
+
+### 5.3. Cache Summary (Internal)
+
+```typescript
+export const cacheSummary = internalMutation({
+  args: {
+    documentId: v.id("documents"),
+    userId: v.string(),
+    summary: v.string(),
+    contentHash: v.string(),
+    model: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Delete old cache for this document
+    const oldCache = await ctx.db
+      .query("aiSummaries")
+      .withIndex("by_document", (q) => q.eq("documentId", args.documentId))
+      .collect();
+    
+    await Promise.all(oldCache.map((cache) => ctx.db.delete(cache._id)));
+    
+    // Insert new cache
+    const summaryId = await ctx.db.insert("aiSummaries", {
+      documentId: args.documentId,
+      userId: args.userId,
+      summary: args.summary,
+      contentHash: args.contentHash,
+      model: args.model,
+      createdAt: Date.now(),
+    });
+    
+    return summaryId;
+  },
+});
+```
+
+### 5.4. Get Summary History
+
+```typescript
+export const getSummaryHistory = query({
   args: { documentId: v.id("documents") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
+    if (!identity) throw new Error("Not authenticated");
+    
     const userId = identity.subject;
-
+    
     const summaries = await ctx.db
       .query("aiSummaries")
       .withIndex("by_document", (q) => q.eq("documentId", args.documentId))
       .filter((q) => q.eq(q.field("userId"), userId))
-      .collect();
-
-    for (const summary of summaries) {
-      await ctx.db.delete(summary._id);
-    }
-
-    return summaries.length;
+      .order("desc")
+      .take(5);
+    
+    return summaries;
   },
 });
 ```
 
 ---
 
-## 6. UI Components
+## 6. UI COMPONENTS
 
-### 6.1 Component Tree
+### 6.1. Component Structure
 
 ```
 components/ai/
-├── summarize-button.tsx            # Trigger button
-├── summary-modal.tsx               # Summary display
-└── summary-skeleton.tsx            # Loading state
+├── summarize-button.tsx        # Trigger button
+├── summary-modal.tsx           # Display summary
+└── summary-skeleton.tsx        # Loading state
 ```
 
-### 6.2 Summarize Button
+### 6.2. SummarizeButton Component
 
 ```typescript
 // components/ai/summarize-button.tsx
 "use client";
 
-import { useState } from "react";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
-import { toast } from "sonner";
+import { useState } from "react";
 import { SummaryModal } from "./summary-modal";
+import { Id } from "@/convex/_generated/dataModel";
 
 interface SummarizeButtonProps {
   documentId: Id<"documents">;
@@ -393,256 +340,382 @@ interface SummarizeButtonProps {
 
 export const SummarizeButton = ({ documentId }: SummarizeButtonProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [summary, setSummary] = useState("");
-  const [isCached, setIsCached] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const summarize = useMutation(api.ai.summarizeDocument);
-
-  const handleSummarize = async () => {
-    setIsLoading(true);
-    setIsOpen(true);
-
-    try {
-      const result = await summarize({ documentId });
-      setSummary(result.summary);
-      setIsCached(result.cached);
-    } catch (error: any) {
-      console.error("Summarize error:", error);
-      
-      if (error.message.includes("too short")) {
-        toast.error("Content too short to summarize");
-      } else if (error.message.includes("not configured")) {
-        toast.error("AI feature not available");
-      } else {
-        toast.error("Failed to generate summary");
-      }
-      
-      setIsOpen(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  
   return (
     <>
       <Button
-        onClick={handleSummarize}
-        variant="ghost"
+        variant="outline"
         size="sm"
-        disabled={isLoading}
+        onClick={() => setIsOpen(true)}
+        className="gap-2"
       >
-        <Sparkles className="h-4 w-4 mr-2" />
-        {isLoading ? "Summarizing..." : "Summarize with AI"}
+        <Sparkles className="h-4 w-4" />
+        Tóm tắt AI
       </Button>
-
+      
       <SummaryModal
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        summary={summary}
-        isCached={isCached}
-        isLoading={isLoading}
         documentId={documentId}
+        open={isOpen}
+        onClose={() => setIsOpen(false)}
       />
     </>
   );
 };
 ```
 
-### 6.3 Summary Modal
+### 6.3. SummaryModal Component
 
 ```typescript
 // components/ai/summary-modal.tsx
 "use client";
 
-import { useState } from "react";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Copy, RefreshCw, Sparkles } from "lucide-react";
+import { useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { Copy, RefreshCw, Sparkles } from "lucide-react";
 import { SummarySkeleton } from "./summary-skeleton";
 
 interface SummaryModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  summary: string;
-  isCached: boolean;
-  isLoading: boolean;
   documentId: Id<"documents">;
+  open: boolean;
+  onClose: () => void;
 }
 
-export const SummaryModal = ({
-  isOpen,
-  onClose,
-  summary,
-  isCached,
-  isLoading,
-  documentId,
-}: SummaryModalProps) => {
-  const clearCache = useMutation(api.ai.clearSummaryCache);
-  const summarize = useMutation(api.ai.summarizeDocument);
-  const [isRegenerating, setIsRegenerating] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(summary);
-    toast.success("Summary copied to clipboard!");
-  };
-
-  const handleRegenerate = async () => {
-    setIsRegenerating(true);
-
+export const SummaryModal = ({ documentId, open, onClose }: SummaryModalProps) => {
+  const summarize = useAction(api.ai.summarizeDocument);
+  const [summary, setSummary] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [fromCache, setFromCache] = useState(false);
+  const [model, setModel] = useState("");
+  
+  useEffect(() => {
+    if (open && !summary) {
+      handleSummarize();
+    }
+  }, [open]);
+  
+  const handleSummarize = async (forceRegenerate = false) => {
+    setIsLoading(true);
+    
     try {
-      await clearCache({ documentId });
-      const result = await summarize({ documentId });
-      toast.success("Summary regenerated!");
-    } catch (error) {
-      toast.error("Failed to regenerate summary");
+      const result = await summarize({
+        documentId,
+        forceRegenerate,
+      });
+      
+      setSummary(result.summary);
+      setFromCache(result.fromCache);
+      setModel(result.model);
+      
+      if (result.fromCache) {
+        toast.success("Đã tải tóm tắt từ cache");
+      } else {
+        toast.success("Đã tạo tóm tắt mới!");
+      }
+    } catch (error: any) {
+      console.error("Summarize error:", error);
+      toast.error(error.message || "Không thể tạo tóm tắt");
     } finally {
-      setIsRegenerating(false);
+      setIsLoading(false);
     }
   };
-
+  
+  const handleCopy = () => {
+    navigator.clipboard.writeText(summary);
+    toast.success("Đã copy tóm tắt!");
+  };
+  
+  const handleRegenerate = () => {
+    handleSummarize(true);
+  };
+  
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-yellow-500" />
-            AI Summary
-            {isCached && (
-              <span className="text-xs text-muted-foreground font-normal">
-                (Cached)
-              </span>
-            )}
+            <Sparkles className="h-5 w-5 text-purple-500" />
+            Tóm tắt AI
           </DialogTitle>
+          <DialogDescription>
+            Tóm tắt nội dung trang bằng Google Gemini AI
+          </DialogDescription>
         </DialogHeader>
-
-        <div className="py-4">
+        
+        <div className="space-y-4">
           {isLoading ? (
             <SummarySkeleton />
+          ) : summary ? (
+            <>
+              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                  {summary}
+                </p>
+              </div>
+              
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>
+                  {fromCache ? "📦 Từ cache" : "✨ Mới tạo"} • Model: {model}
+                </span>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopy}
+                  className="flex-1"
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRegenerate}
+                  disabled={isLoading}
+                  className="flex-1"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Tạo lại
+                </Button>
+              </div>
+            </>
           ) : (
-            <div className="prose dark:prose-invert max-w-none">
-              <div className="whitespace-pre-wrap">{summary}</div>
+            <div className="p-8 text-center text-muted-foreground">
+              Click "Tóm tắt" để bắt đầu
             </div>
           )}
         </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={handleCopy}
-            disabled={isLoading}
-          >
-            <Copy className="h-4 w-4 mr-2" />
-            Copy
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleRegenerate}
-            disabled={isLoading || isRegenerating}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            {isRegenerating ? "Regenerating..." : "Regenerate"}
-          </Button>
-          <Button onClick={onClose}>Close</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
 ```
 
----
+### 6.4. SummarySkeleton Component
 
-## 7. Validation Rules
+```typescript
+// components/ai/summary-skeleton.tsx
+import { Skeleton } from "@/components/ui/skeleton";
 
-### 7.1 Content Validation
+export const SummarySkeleton = () => {
+  return (
+    <div className="space-y-3">
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-3/4" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-2/3" />
+    </div>
+  );
+};
+```
 
-| Rule | Check | Error |
-|------|-------|-------|
-| Min length | >= 100 chars | "Content too short" |
-| Valid JSON | Parse-able | "Invalid content" |
-| Max length | <= 50,000 chars | "Content too long" |
+### 6.5. Integration với Document Page
 
----
+```typescript
+// app/(main)/(routes)/documents/[documentId]/page.tsx
+import { SummarizeButton } from "@/components/ai/summarize-button";
 
-## 8. Error Handling
-
-### 8.1 Error Cases
-
-| Error | Message | Action |
-|-------|---------|--------|
-| Content too short | "Content too short" | Show error |
-| API key missing | "AI not configured" | Contact admin |
-| API error | "Failed to generate" | Retry button |
-| Rate limit | "Too many requests" | Show countdown |
-| Network error | "Connection lost" | Retry |
-
----
-
-## 9. Test Cases
-
-### 9.1 Functional Tests
-
-| Test ID | Scenario | Expected Result |
-|---------|----------|-----------------|
-| TC18-01 | Summarize document | Summary generated |
-| TC18-02 | Use cached summary | Instant return |
-| TC18-03 | Copy summary | Copied to clipboard |
-| TC18-04 | Regenerate | New summary created |
-| TC18-05 | Content too short | Error shown |
-| TC18-06 | API error | Error handled |
-
----
-
-## 10. Code Examples
-
-Đã bao gồm đầy đủ trong section 6.
+const DocumentIdPage = ({ params }: { params: { documentId: string } }) => {
+  return (
+    <div>
+      {/* Toolbar */}
+      <div className="flex items-center gap-2 mb-4">
+        <SummarizeButton documentId={params.documentId as Id<"documents">} />
+        {/* Other toolbar buttons */}
+      </div>
+      
+      {/* Editor */}
+      <Editor documentId={params.documentId} />
+    </div>
+  );
+};
+```
 
 ---
 
-## 11. Security Considerations
+## 7. ENVIRONMENT SETUP
 
-- ✅ Verify authentication
-- ✅ Check document ownership
-- ✅ Secure API key
-- ✅ Rate limiting
-- ✅ Content validation
+### 7.1. Environment Variables
 
----
+```env
+# .env.local
+GEMINI_API_KEY=your_gemini_api_key_here
+```
 
-## 12. Performance Optimization
+### 7.2. Get Gemini API Key
 
-- Cache summaries by content hash
-- Limit API calls
-- Debounce requests
-- Show loading states
+1. Truy cập: https://makersuite.google.com/app/apikey
+2. Tạo API key mới
+3. Copy và paste vào `.env.local`
 
----
+### 7.3. Install Dependencies
 
-## 13. Related Use Cases
-
-- [UC19 - Hỏi đáp AI](./UC19-ai-chat.md)
-- [UC09 - Sửa nội dung](../02-documents/UC09-edit-content.md)
+```bash
+npm install @google/generative-ai
+```
 
 ---
 
-## 14. References
+## 8. VALIDATION RULES
+
+| Field | Rule | Error Message |
+|-------|------|---------------|
+| Content | Min 100 chars | "Nội dung quá ngắn để tóm tắt" |
+| API Key | Must be configured | "API key chưa được cấu hình" |
+| Document | Must exist and owned by user | "Không có quyền truy cập" |
+
+---
+
+## 9. ERROR HANDLING
+
+| Error Code | Condition | Message | Action |
+|------------|-----------|---------|--------|
+| `NOT_AUTHENTICATED` | User not logged in | "Vui lòng đăng nhập" | Redirect to login |
+| `UNAUTHORIZED` | Not document owner | "Bạn không có quyền tóm tắt trang này" | Show error toast |
+| `CONTENT_TOO_SHORT` | Content < 100 chars | "Nội dung quá ngắn để tóm tắt" | Show error toast |
+| `API_QUOTA_EXCEEDED` | Gemini quota exceeded | "Đã vượt quá giới hạn API. Vui lòng thử lại sau" | Show error toast |
+| `API_ERROR` | Gemini API error | "Không thể tạo tóm tắt. Vui lòng thử lại" | Show error toast |
+
+---
+
+## 10. TEST CASES
+
+### Functional Tests:
+
+**TC01: Summarize Document**
+- Input: Document with 500 chars
+- Expected: Summary generated successfully
+- Actual: ⏳ Pending
+
+**TC02: Cache Hit**
+- Input: Summarize same document twice
+- Expected: Second time uses cache
+- Actual: ⏳ Pending
+
+**TC03: Content Too Short**
+- Input: Document with 50 chars
+- Expected: Error "Content too short"
+- Actual: ⏳ Pending
+
+**TC04: Regenerate**
+- Input: Click "Tạo lại"
+- Expected: New summary generated (bypass cache)
+- Actual: ⏳ Pending
+
+### Non-functional Tests:
+
+**Performance:**
+- API call: < 5s
+- Cache retrieval: < 100ms
+- Actual: ⏳ Pending
+
+**Cost:**
+- Cache hit rate: > 70%
+- API calls per user per day: < 50
+- Actual: ⏳ Pending
+
+---
+
+## 11. CODE EXAMPLES
+
+### 11.1. Summarize Document
+
+```typescript
+const summarize = useAction(api.ai.summarizeDocument);
+
+const result = await summarize({
+  documentId: "j57abc123",
+  forceRegenerate: false,
+});
+
+console.log(result.summary);
+console.log(result.fromCache); // true/false
+```
+
+### 11.2. Extract Plain Text
+
+```typescript
+function extractPlainText(content: string): string {
+  const blocks = JSON.parse(content);
+  
+  return blocks
+    .map((block: any) => block.content?.map((c: any) => c.text).join(""))
+    .join("\n");
+}
+```
+
+---
+
+## 12. SECURITY CONSIDERATIONS
+
+- ✅ **API Key Security:** Store in environment variables, never expose to client
+- ✅ **Authentication:** Require login for all operations
+- ✅ **Authorization:** Verify document ownership
+- ✅ **Rate Limiting:** Limit API calls per user
+- ✅ **Content Validation:** Sanitize input before sending to API
+- ✅ **Cache Security:** Store summaries with userId check
+
+---
+
+## 13. PERFORMANCE OPTIMIZATION
+
+- ✅ **Caching:** Cache summaries by content hash (70%+ hit rate)
+- ✅ **Content Hashing:** Detect content changes efficiently
+- ✅ **Lazy Loading:** Only summarize when user requests
+- ✅ **Cleanup:** Delete old cache entries (30 days)
+- ✅ **Batch Processing:** Consider batch summarization for multiple documents
+
+---
+
+## 14. COST OPTIMIZATION
+
+### Gemini API Pricing (Free Tier):
+- **Free:** 60 requests per minute
+- **Paid:** $0.00025 per 1K characters
+
+### Cost Reduction Strategies:
+1. ✅ **Aggressive Caching:** Cache by content hash
+2. ✅ **Content Length Limit:** Max 5000 chars per summary
+3. ✅ **Rate Limiting:** Max 10 summaries per user per day
+4. ✅ **Cleanup:** Delete old summaries after 30 days
+
+### Estimated Cost:
+- 100 users × 5 summaries/day × 1000 chars = 500K chars/day
+- Cost: $0.125/day = $3.75/month (with 70% cache hit rate)
+
+---
+
+## 15. RELATED USE CASES
+
+- **UC07:** Tạo trang mới - Source of content to summarize
+- **UC09:** Sửa nội dung - Content changes invalidate cache
+- **UC19:** Hỏi đáp AI - Can use summary as context
+
+---
+
+## 16. REFERENCES
 
 - [Google Gemini API](https://ai.google.dev/)
-- [Gemini Node.js SDK](https://www.npmjs.com/package/@google/generative-ai)
+- [Gemini API Documentation](https://ai.google.dev/docs)
+- [Convex Actions](https://docs.convex.dev/functions/actions)
+- [Implementation Guide](../UPDATE_GUIDE.md)
 
 ---
 
-**Last Updated:** 02/12/2025  
-**Status:** Ready for implementation  
-**Estimated Effort:** 2-3 days
+**Tạo bởi:** AI Assistant  
+**Ngày:** 08/12/2025  
+**Trạng thái:** Ready for implementation  
+**Ước tính:** 3-4 ngày

@@ -1,562 +1,511 @@
-# UC14 - Quản lý bảng dữ liệu
+# UC14 - QUẢN LÝ BẢNG (TABLES)
 
-## 1. Thông tin cơ bản
+## 1. THÔNG TIN CƠ BẢN
 
-| Thuộc tính | Giá trị |
-|------------|---------|
-| **ID** | UC14 |
-| **Tên** | Quản lý bảng dữ liệu (Excel-like Tables) |
-| **Mô tả** | Người dùng tạo và quản lý bảng dữ liệu với các cột động, hỗ trợ import/export Excel/CSV |
-| **Actor** | Người dùng (User) |
-| **Precondition** | - Người dùng đã đăng nhập<br>- Người dùng có quyền tạo tables |
-| **Postcondition** | - Bảng được tạo/cập nhật<br>- Dữ liệu được lưu vào Convex<br>- UI cập nhật real-time |
-| **Độ ưu tiên** | 🔴 Cao (Core feature) |
-| **Trạng thái** | 🔄 Cần triển khai |
-| **Sprint** | Sprint 2-3 (2-3 tuần) |
-| **Complexity** | ⭐⭐⭐⭐⭐ (Rất phức tạp) |
-
----
-
-## 2. Sub Use Cases
-
-UC14 được chia thành 8 sub-features:
-
-| ID | Tên | Mô tả | Priority |
-|----|-----|-------|----------|
-| UC14.1 | Tạo bảng mới | Tạo table với tên và mô tả | 🔴 Cao |
-| UC14.2 | Thêm/xóa cột | Quản lý columns (add, delete, rename, reorder) | 🔴 Cao |
-| UC14.3 | Thêm/xóa hàng | Quản lý rows (add, delete, reorder) | 🔴 Cao |
-| UC14.4 | Chỉnh sửa cell | Edit cell data với validation theo column type | 🔴 Cao |
-| UC14.5 | Import Excel/CSV | Import data từ file Excel hoặc CSV | 🟡 Trung bình |
-| UC14.6 | Export Excel/CSV | Export table ra file Excel hoặc CSV | 🟡 Trung bình |
-| UC14.7 | Filter & Sort | Lọc và sắp xếp dữ liệu | 🟢 Thấp |
-| UC14.8 | Column Types | Hỗ trợ nhiều loại cột (text, number, date, select, checkbox) | 🔴 Cao |
+- **Mã UC:** UC14
+- **Tên:** Quản lý bảng dữ liệu
+- **Mô tả:** Cho phép người dùng tạo, xem, sửa, xóa bảng dữ liệu với rows và columns
+- **Actor:** User (Authenticated)
+- **Precondition:** User đã đăng nhập
+- **Postcondition:** Bảng được tạo/cập nhật/xóa thành công
+- **Trạng thái:** ❌ Chưa triển khai
+- **Ưu tiên:** 🔴 CAO
+- **Thời gian ước tính:** 1.5 tuần
+- **Dependencies:** 
+  - ✅ Authentication (UC01-UC06)
+  - ✅ Documents system (UC07-UC13)
+- **Tech Stack:** Convex, React, TypeScript, Tanstack Table
 
 ---
 
-## 3. Luồng xử lý chính
+## 2. LUỒNG XỬ LÝ
 
-### 3.1 UC14.1 - Tạo bảng mới
+### Main Flow: Tạo bảng mới
 
-**Main Flow:**
-1. Người dùng click "New Table" button
-2. Hệ thống hiển thị modal "Create Table"
-3. Người dùng nhập tên bảng (required)
-4. Người dùng nhập mô tả (optional)
-5. Người dùng click "Create"
-6. Hệ thống tạo table với 3 cột mặc định:
-   - Column 1: "Name" (text)
-   - Column 2: "Status" (select)
-   - Column 3: "Date" (date)
-7. Hệ thống tạo 1 hàng trống
-8. Redirect sang table view
-9. Use case kết thúc
+1. User click "Tạo bảng" trong document
+2. System hiển thị table editor
+3. User nhập tên columns và thêm rows
+4. User nhập dữ liệu vào cells
+5. System auto-save table data
+6. System hiển thị bảng với dữ liệu
 
-**Exception Flow:**
-- E1: Tên bảng trống → Hiển thị lỗi "Table name is required"
-- E2: Tên bảng trùng → Hiển thị lỗi "Table name already exists"
+### Alternative Flow 1: Import từ CSV
 
-### 3.2 UC14.4 - Chỉnh sửa cell
+3a. User chọn "Import CSV"
+3b. System parse CSV file
+3c. System tạo columns và rows từ CSV
+3d. Continue từ step 5
 
-**Main Flow:**
-1. Người dùng click vào cell
-2. Hệ thống hiển thị editor tương ứng với column type
-3. Người dùng nhập/chọn giá trị
-4. Người dùng nhấn Enter hoặc click ra ngoài
-5. Hệ thống validate giá trị
-6. Hệ thống lưu vào database
-7. UI cập nhật real-time
-8. Use case kết thúc
+### Alternative Flow 2: Sử dụng template
 
-**Column Type Editors:**
-- **Text:** Input field
-- **Number:** Number input với spinner
-- **Date:** Date picker
-- **Select:** Dropdown với options
-- **Checkbox:** Checkbox toggle
+3a. User chọn template (Student grades, Schedule, etc.)
+3b. System tạo bảng với columns predefined
+3c. Continue từ step 4
 
-### 3.3 UC14.5 - Import Excel/CSV
+### Exception Flow
 
-**Main Flow:**
-1. Người dùng click "Import" button
-2. Hệ thống hiển thị file upload modal
-3. Người dùng chọn file (.xlsx, .csv)
-4. Hệ thống parse file
-5. Hệ thống hiển thị preview (first 10 rows)
-6. Người dùng map columns (Excel → Table columns)
-7. Người dùng click "Import"
-8. Hệ thống validate data
-9. Hệ thống insert rows vào database
-10. UI cập nhật với data mới
-11. Hiển thị toast "Imported X rows successfully"
-12. Use case kết thúc
-
-**Exception Flow:**
-- E1: File quá lớn (>5MB) → "File too large. Max 5MB"
-- E2: File format sai → "Invalid file format. Please upload .xlsx or .csv"
-- E3: Data validation failed → "X rows failed validation. Please check your data"
+- 2a. Nếu document đã có table → Show existing table
+- 4a. Nếu validation fail → Show error inline
+- 5a. Nếu network error → Retry auto-save
+- *. Nếu unauthorized → Redirect to login
 
 ---
 
-## 4. Biểu đồ hoạt động (UC14.4 - Edit Cell)
+## 3. BIỂU ĐỒ HOẠT ĐỘNG
 
 ```
-┌─────────┐              ┌──────────┐              ┌────────┐
-│  User   │              │  System  │              │ Convex │
-└────┬────┘              └─────┬────┘              └───┬────┘
-     │                         │                       │
-     │  1. Click cell          │                       │
-     ├────────────────────────>│                       │
-     │                         │                       │
-     │  2. Show editor         │                       │
-     │<────────────────────────┤                       │
-     │                         │                       │
-     │  3. Enter value         │                       │
-     ├────────────────────────>│                       │
-     │                         │                       │
-     │  4. Press Enter         │                       │
-     ├────────────────────────>│                       │
-     │                         │                       │
-     │                         │  5. Validate          │
-     │                         ├──────────────────────>│
-     │                         │                       │
-     │                         │  6. Save to DB        │
-     │                         │<──────────────────────┤
-     │                         │                       │
-     │  7. Update UI           │                       │
-     │<────────────────────────┤                       │
-     │                         │                       │
+[User] → [Create Table] → [Define Columns] → [Add Rows] → [Fill Data] → [Auto-save]
+                                                                              ↓
+                                                                         [Display Table]
+            ↓ (Import CSV)
+       [Parse CSV] → [Create Structure] → [Fill Data] → [Auto-save]
 ```
 
 ---
 
-## 5. Database Schema
+## 4. DATABASE SCHEMA
 
-### 5.1 Convex Schema
+### 4.1. Tables Table
 
 ```typescript
 // convex/schema.ts
-
 export default defineSchema({
-  // ... existing tables ...
+  // ... existing documents table ...
   
-  /**
-   * Tables - Bảng dữ liệu chính
-   */
   tables: defineTable({
-    userId: v.string(),
-    title: v.string(),
-    description: v.optional(v.string()),
+    documentId: v.id("documents"),      // Link to parent document
+    userId: v.string(),                  // Owner
+    name: v.string(),                    // Table name
+    columns: v.array(v.object({          // Column definitions
+      id: v.string(),                    // Unique column ID
+      name: v.string(),                  // Column name
+      type: v.string(),                  // "text" | "number" | "date" | "select" | "checkbox"
+      options: v.optional(v.array(v.string())), // For select type
+      width: v.optional(v.number()),     // Column width in px
+    })),
+    rows: v.array(v.object({             // Row data
+      id: v.string(),                    // Unique row ID
+      cells: v.object({}),               // Dynamic: { [columnId]: value }
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    })),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
+    .index("by_document", ["documentId"])
     .index("by_user", ["userId"])
-    .index("by_user_updated", ["userId", "updatedAt"]),
-
-  /**
-   * Table Columns - Cột của bảng
-   */
-  tableColumns: defineTable({
-    tableId: v.id("tables"),
-    name: v.string(),
-    type: v.string(),           // "text" | "number" | "date" | "select" | "checkbox"
-    order: v.number(),          // Thứ tự hiển thị (0, 1, 2, ...)
-    config: v.optional(v.string()), // JSON config (e.g., select options)
-    width: v.optional(v.number()),  // Column width in pixels
-  })
-    .index("by_table", ["tableId"])
-    .index("by_table_order", ["tableId", "order"]),
-
-  /**
-   * Table Rows - Hàng của bảng
-   */
-  tableRows: defineTable({
-    tableId: v.id("tables"),
-    order: v.number(),          // Thứ tự hiển thị
-    createdAt: v.number(),
-  })
-    .index("by_table", ["tableId"])
-    .index("by_table_order", ["tableId", "order"]),
-
-  /**
-   * Table Cells - Ô dữ liệu
-   */
-  tableCells: defineTable({
-    rowId: v.id("tableRows"),
-    columnId: v.id("tableColumns"),
-    value: v.string(),          // Store as JSON string
-  })
-    .index("by_row", ["rowId"])
-    .index("by_column", ["columnId"])
-    .index("by_row_column", ["rowId", "columnId"]),
+    .index("by_user_document", ["userId", "documentId"]),
 });
 ```
 
-### 5.2 Column Type Config
+### 4.2. Tương thích với Documents hiện tại
 
 ```typescript
-// Column type configurations
-type ColumnConfig = {
-  text: {};
-  number: {
-    min?: number;
-    max?: number;
-    decimals?: number;
-  };
-  date: {
-    format?: "MM/DD/YYYY" | "DD/MM/YYYY" | "YYYY-MM-DD";
-  };
-  select: {
-    options: Array<{ value: string; label: string; color?: string }>;
-    multiple?: boolean;
-  };
-  checkbox: {};
-};
+// Không cần thay đổi documents table
+// Table sẽ được embed trong document content hoặc link qua documentId
 ```
 
 ---
 
-## 6. API Endpoints
+## 5. API ENDPOINTS
 
-### 6.1 Tables CRUD
+### 5.1. Create Table
 
 ```typescript
 // convex/tables.ts
-
-import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
-
-/**
- * Get all tables for current user
- */
-export const getTables = query({
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-
-    const tables = await ctx.db
-      .query("tables")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
-      .order("desc")
-      .collect();
-
-    return tables;
-  },
-});
-
-/**
- * Get table by ID with columns and rows
- */
-export const getTableById = query({
-  args: { tableId: v.id("tables") },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-
-    const table = await ctx.db.get(args.tableId);
-    if (!table) throw new Error("Table not found");
-    if (table.userId !== identity.subject) throw new Error("Unauthorized");
-
-    // Get columns
-    const columns = await ctx.db
-      .query("tableColumns")
-      .withIndex("by_table_order", (q) => q.eq("tableId", args.tableId))
-      .collect();
-
-    // Get rows
-    const rows = await ctx.db
-      .query("tableRows")
-      .withIndex("by_table_order", (q) => q.eq("tableId", args.tableId))
-      .collect();
-
-    // Get cells for all rows
-    const cellsData = await Promise.all(
-      rows.map(async (row) => {
-        const cells = await ctx.db
-          .query("tableCells")
-          .withIndex("by_row", (q) => q.eq("rowId", row._id))
-          .collect();
-        return { rowId: row._id, cells };
-      })
-    );
-
-    return {
-      table,
-      columns,
-      rows,
-      cells: cellsData,
-    };
-  },
-});
-
-/**
- * Create new table
- */
 export const createTable = mutation({
   args: {
-    title: v.string(),
-    description: v.optional(v.string()),
+    documentId: v.id("documents"),
+    name: v.string(),
+    columns: v.array(v.object({
+      id: v.string(),
+      name: v.string(),
+      type: v.string(),
+      options: v.optional(v.array(v.string())),
+      width: v.optional(v.number()),
+    })),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-
-    if (!args.title || args.title.trim() === "") {
-      throw new Error("Table name is required");
+    if (!identity) throw new Error("Not authenticated");
+    
+    const userId = identity.subject;
+    
+    // Verify document ownership
+    const document = await ctx.db.get(args.documentId);
+    if (!document || document.userId !== userId) {
+      throw new Error("Unauthorized");
     }
-
-    const now = Date.now();
-
-    // Create table
+    
     const tableId = await ctx.db.insert("tables", {
-      userId: identity.subject,
-      title: args.title,
-      description: args.description,
-      createdAt: now,
-      updatedAt: now,
+      documentId: args.documentId,
+      userId,
+      name: args.name,
+      columns: args.columns,
+      rows: [], // Empty initially
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     });
-
-    // Create default columns
-    const defaultColumns = [
-      { name: "Name", type: "text", order: 0 },
-      { name: "Status", type: "select", order: 1, config: JSON.stringify({
-        options: [
-          { value: "todo", label: "To Do", color: "#gray" },
-          { value: "in_progress", label: "In Progress", color: "#blue" },
-          { value: "done", label: "Done", color: "#green" },
-        ]
-      })},
-      { name: "Date", type: "date", order: 2 },
-    ];
-
-    const columnIds = await Promise.all(
-      defaultColumns.map((col) =>
-        ctx.db.insert("tableColumns", {
-          tableId,
-          name: col.name,
-          type: col.type,
-          order: col.order,
-          config: col.config,
-        })
-      )
-    );
-
-    // Create one empty row
-    const rowId = await ctx.db.insert("tableRows", {
-      tableId,
-      order: 0,
-      createdAt: now,
-    });
-
-    // Create empty cells
-    await Promise.all(
-      columnIds.map((columnId) =>
-        ctx.db.insert("tableCells", {
-          rowId,
-          columnId,
-          value: "",
-        })
-      )
-    );
-
+    
     return tableId;
   },
 });
+```
 
-/**
- * Update cell value
- */
-export const updateCell = mutation({
-  args: {
-    rowId: v.id("tableRows"),
-    columnId: v.id("tableColumns"),
-    value: v.string(),
-  },
+### 5.2. Get Table by Document
+
+```typescript
+export const getTableByDocument = query({
+  args: { documentId: v.id("documents") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-
-    // Check if cell exists
-    const existingCell = await ctx.db
-      .query("tableCells")
-      .withIndex("by_row_column", (q) =>
-        q.eq("rowId", args.rowId).eq("columnId", args.columnId)
+    if (!identity) throw new Error("Not authenticated");
+    
+    const userId = identity.subject;
+    
+    const table = await ctx.db
+      .query("tables")
+      .withIndex("by_user_document", (q) =>
+        q.eq("userId", userId).eq("documentId", args.documentId)
       )
       .first();
+    
+    return table;
+  },
+});
+```
 
-    if (existingCell) {
-      // Update existing cell
-      await ctx.db.patch(existingCell._id, {
-        value: args.value,
-      });
-    } else {
-      // Create new cell
-      await ctx.db.insert("tableCells", {
-        rowId: args.rowId,
-        columnId: args.columnId,
-        value: args.value,
-      });
+### 5.3. Update Table
+
+```typescript
+export const updateTable = mutation({
+  args: {
+    id: v.id("tables"),
+    name: v.optional(v.string()),
+    columns: v.optional(v.array(v.object({
+      id: v.string(),
+      name: v.string(),
+      type: v.string(),
+      options: v.optional(v.array(v.string())),
+      width: v.optional(v.number()),
+    }))),
+    rows: v.optional(v.array(v.object({
+      id: v.string(),
+      cells: v.object({}),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    }))),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    
+    const userId = identity.subject;
+    const { id, ...updates } = args;
+    
+    const existingTable = await ctx.db.get(id);
+    if (!existingTable || existingTable.userId !== userId) {
+      throw new Error("Unauthorized");
     }
-
-    return true;
-  },
-});
-
-/**
- * Add new row
- */
-export const addRow = mutation({
-  args: { tableId: v.id("tables") },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
-
-    // Get max order
-    const rows = await ctx.db
-      .query("tableRows")
-      .withIndex("by_table", (q) => q.eq("tableId", args.tableId))
-      .collect();
-
-    const maxOrder = rows.length > 0 ? Math.max(...rows.map((r) => r.order)) : -1;
-
-    // Create new row
-    const rowId = await ctx.db.insert("tableRows", {
-      tableId: args.tableId,
-      order: maxOrder + 1,
-      createdAt: Date.now(),
+    
+    await ctx.db.patch(id, {
+      ...updates,
+      updatedAt: Date.now(),
     });
-
-    // Get columns
-    const columns = await ctx.db
-      .query("tableColumns")
-      .withIndex("by_table", (q) => q.eq("tableId", args.tableId))
-      .collect();
-
-    // Create empty cells
-    await Promise.all(
-      columns.map((col) =>
-        ctx.db.insert("tableCells", {
-          rowId,
-          columnId: col._id,
-          value: "",
-        })
-      )
-    );
-
-    return rowId;
   },
 });
+```
 
-/**
- * Delete row
- */
-export const deleteRow = mutation({
-  args: { rowId: v.id("tableRows") },
+### 5.4. Add Row
+
+```typescript
+export const addRow = mutation({
+  args: {
+    tableId: v.id("tables"),
+    cells: v.object({}), // { [columnId]: value }
+  },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthorized");
+    if (!identity) throw new Error("Not authenticated");
+    
+    const userId = identity.subject;
+    const table = await ctx.db.get(args.tableId);
+    
+    if (!table || table.userId !== userId) {
+      throw new Error("Unauthorized");
+    }
+    
+    const newRow = {
+      id: crypto.randomUUID(),
+      cells: args.cells,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    
+    await ctx.db.patch(args.tableId, {
+      rows: [...table.rows, newRow],
+      updatedAt: Date.now(),
+    });
+    
+    return newRow.id;
+  },
+});
+```
 
-    // Delete all cells in this row
-    const cells = await ctx.db
-      .query("tableCells")
-      .withIndex("by_row", (q) => q.eq("rowId", args.rowId))
-      .collect();
+### 5.5. Update Cell
 
-    await Promise.all(cells.map((cell) => ctx.db.delete(cell._id)));
+```typescript
+export const updateCell = mutation({
+  args: {
+    tableId: v.id("tables"),
+    rowId: v.string(),
+    columnId: v.string(),
+    value: v.any(), // Can be string, number, boolean, etc.
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    
+    const userId = identity.subject;
+    const table = await ctx.db.get(args.tableId);
+    
+    if (!table || table.userId !== userId) {
+      throw new Error("Unauthorized");
+    }
+    
+    const updatedRows = table.rows.map((row) => {
+      if (row.id === args.rowId) {
+        return {
+          ...row,
+          cells: {
+            ...row.cells,
+            [args.columnId]: args.value,
+          },
+          updatedAt: Date.now(),
+        };
+      }
+      return row;
+    });
+    
+    await ctx.db.patch(args.tableId, {
+      rows: updatedRows,
+      updatedAt: Date.now(),
+    });
+  },
+});
+```
 
-    // Delete row
-    await ctx.db.delete(args.rowId);
+### 5.6. Delete Row
 
-    return true;
+```typescript
+export const deleteRow = mutation({
+  args: {
+    tableId: v.id("tables"),
+    rowId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    
+    const userId = identity.subject;
+    const table = await ctx.db.get(args.tableId);
+    
+    if (!table || table.userId !== userId) {
+      throw new Error("Unauthorized");
+    }
+    
+    const updatedRows = table.rows.filter((row) => row.id !== args.rowId);
+    
+    await ctx.db.patch(args.tableId, {
+      rows: updatedRows,
+      updatedAt: Date.now(),
+    });
+  },
+});
+```
+
+### 5.7. Delete Table
+
+```typescript
+export const deleteTable = mutation({
+  args: { id: v.id("tables") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    
+    const userId = identity.subject;
+    const table = await ctx.db.get(args.id);
+    
+    if (!table || table.userId !== userId) {
+      throw new Error("Unauthorized");
+    }
+    
+    await ctx.db.delete(args.id);
   },
 });
 ```
 
 ---
 
-## 7. UI Components
+## 6. UI COMPONENTS
 
-### 7.1 Component Tree
+### 6.1. Component Structure
 
 ```
-app/(main)/(routes)/tables/
-├── page.tsx                          # Tables list page
-├── [tableId]/
-│   └── page.tsx                      # Table view page
-└── _components/
-    ├── table-list.tsx                # List of tables
-    ├── create-table-modal.tsx        # Create table modal
-    ├── table-grid.tsx                # Main grid component
-    ├── table-header.tsx              # Column headers
-    ├── table-row.tsx                 # Row component
-    ├── table-cell.tsx                # Cell component
-    ├── cell-editors/
-    │   ├── text-editor.tsx
-    │   ├── number-editor.tsx
-    │   ├── date-editor.tsx
-    │   ├── select-editor.tsx
-    │   └── checkbox-editor.tsx
-    ├── import-excel-modal.tsx        # Import modal
-    └── column-type-selector.tsx      # Column type dropdown
+components/table/
+├── table-view.tsx           # Main table component
+├── table-header.tsx         # Column headers with sorting
+├── table-row.tsx            # Row component
+├── table-cell.tsx           # Editable cell
+├── add-column-button.tsx    # Add new column
+├── add-row-button.tsx       # Add new row
+├── column-type-selector.tsx # Select column type
+└── table-toolbar.tsx        # Actions (export, import, etc.)
 ```
 
-### 7.2 Key Component: TableGrid
+### 6.2. TableView Component
 
 ```typescript
-// app/(main)/(routes)/tables/_components/table-grid.tsx
+// components/table/table-view.tsx
 "use client";
 
-import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import DataGrid from "react-data-grid";
-import "react-data-grid/lib/styles.css";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Plus, Download, Upload } from "lucide-react";
 
-interface TableGridProps {
-  tableId: Id<"tables">;
+interface TableViewProps {
+  documentId: Id<"documents">;
 }
 
-export const TableGrid = ({ tableId }: TableGridProps) => {
-  const data = useQuery(api.tables.getTableById, { tableId });
+export const TableView = ({ documentId }: TableViewProps) => {
+  const table = useQuery(api.tables.getTableByDocument, { documentId });
   const updateCell = useMutation(api.tables.updateCell);
-
-  if (!data) return <div>Loading...</div>;
-
-  const { table, columns, rows, cells } = data;
-
-  // Transform data for react-data-grid
-  const gridColumns = columns.map((col) => ({
-    key: col._id,
-    name: col.name,
-    editable: true,
-    width: col.width || 150,
-  }));
-
-  const gridRows = rows.map((row) => {
-    const rowCells = cells.find((c) => c.rowId === row._id)?.cells || [];
-    const rowData: any = { id: row._id };
-    
-    rowCells.forEach((cell) => {
-      rowData[cell.columnId] = cell.value;
+  const addRow = useMutation(api.tables.addRow);
+  const addColumn = useMutation(api.tables.addColumn);
+  
+  const [editingCell, setEditingCell] = useState<{
+    rowId: string;
+    columnId: string;
+  } | null>(null);
+  
+  if (!table) {
+    return <CreateTableButton documentId={documentId} />;
+  }
+  
+  const handleCellChange = async (
+    rowId: string,
+    columnId: string,
+    value: any
+  ) => {
+    await updateCell({
+      tableId: table._id,
+      rowId,
+      columnId,
+      value,
     });
-    
-    return rowData;
-  });
-
-  const handleCellEdit = async (newRows: any[]) => {
-    // Handle cell updates
-    // ... implementation
+    setEditingCell(null);
   };
-
+  
   return (
-    <div className="h-full">
-      <DataGrid
-        columns={gridColumns}
-        rows={gridRows}
-        onRowsChange={handleCellEdit}
-        className="rdg-light"
-      />
+    <div className="w-full overflow-x-auto">
+      {/* Toolbar */}
+      <div className="flex items-center gap-2 mb-4">
+        <Button onClick={() => addRow({ tableId: table._id, cells: {} })}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Row
+        </Button>
+        <Button onClick={() => addColumn({ tableId: table._id })}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Column
+        </Button>
+        <Button variant="outline">
+          <Download className="h-4 w-4 mr-2" />
+          Export CSV
+        </Button>
+        <Button variant="outline">
+          <Upload className="h-4 w-4 mr-2" />
+          Import CSV
+        </Button>
+      </div>
+      
+      {/* Table */}
+      <table className="w-full border-collapse">
+        <thead>
+          <tr>
+            {table.columns.map((column) => (
+              <th
+                key={column.id}
+                className="border p-2 bg-gray-100 dark:bg-gray-800"
+                style={{ width: column.width }}
+              >
+                {column.name}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {table.rows.map((row) => (
+            <tr key={row.id}>
+              {table.columns.map((column) => (
+                <td
+                  key={column.id}
+                  className="border p-2"
+                  onClick={() => setEditingCell({ rowId: row.id, columnId: column.id })}
+                >
+                  {editingCell?.rowId === row.id &&
+                  editingCell?.columnId === column.id ? (
+                    <input
+                      type="text"
+                      defaultValue={row.cells[column.id] || ""}
+                      onBlur={(e) =>
+                        handleCellChange(row.id, column.id, e.target.value)
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleCellChange(row.id, column.id, e.currentTarget.value);
+                        }
+                      }}
+                      autoFocus
+                      className="w-full bg-transparent outline-none"
+                    />
+                  ) : (
+                    <span>{row.cells[column.id] || ""}</span>
+                  )}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+```
+
+### 6.3. Integration với Documents
+
+```typescript
+// app/(main)/(routes)/documents/[documentId]/page.tsx
+import { TableView } from "@/components/table/table-view";
+
+const DocumentIdPage = ({ params }: { params: { documentId: string } }) => {
+  const document = useQuery(api.documents.getById, {
+    documentId: params.documentId as Id<"documents">,
+  });
+  
+  return (
+    <div>
+      {/* Existing document content */}
+      <Editor documentId={params.documentId} />
+      
+      {/* Table section */}
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold mb-4">Data Table</h2>
+        <TableView documentId={params.documentId as Id<"documents">} />
+      </div>
     </div>
   );
 };
@@ -564,67 +513,152 @@ export const TableGrid = ({ tableId }: TableGridProps) => {
 
 ---
 
-## 8. Libraries Required
+## 7. VALIDATION RULES
 
-```bash
-# Excel/CSV parsing
-npm install xlsx papaparse
+| Field | Rule | Error Message |
+|-------|------|---------------|
+| Table name | Required, max 100 chars | "Tên bảng không được để trống" |
+| Column name | Required, max 50 chars | "Tên cột không được để trống" |
+| Column type | Must be valid type | "Loại cột không hợp lệ" |
+| Cell value (number) | Must be number | "Giá trị phải là số" |
+| Cell value (date) | Must be valid date | "Ngày không hợp lệ" |
 
-# Data grid
-npm install react-data-grid
+---
 
-# Date picker
-npm install react-datepicker
+## 8. ERROR HANDLING
 
-# Form handling
-npm install react-hook-form zod
+| Error Code | Condition | Message | Action |
+|------------|-----------|---------|--------|
+| `NOT_AUTHENTICATED` | User not logged in | "Vui lòng đăng nhập" | Redirect to login |
+| `UNAUTHORIZED` | Not table owner | "Bạn không có quyền chỉnh sửa bảng này" | Show error toast |
+| `NOT_FOUND` | Table not found | "Không tìm thấy bảng" | Show error toast |
+| `INVALID_COLUMN_TYPE` | Invalid column type | "Loại cột không hợp lệ" | Show error toast |
+| `NETWORK_ERROR` | Network failure | "Lỗi kết nối. Đang thử lại..." | Auto-retry |
+
+---
+
+## 9. TEST CASES
+
+### Functional Tests:
+
+**TC01: Create Table**
+- Input: documentId, table name, columns
+- Expected: Table created successfully
+- Actual: ⏳ Pending
+
+**TC02: Add Row**
+- Input: tableId, cell data
+- Expected: Row added to table
+- Actual: ⏳ Pending
+
+**TC03: Update Cell**
+- Input: tableId, rowId, columnId, value
+- Expected: Cell updated
+- Actual: ⏳ Pending
+
+**TC04: Delete Row**
+- Input: tableId, rowId
+- Expected: Row deleted
+- Actual: ⏳ Pending
+
+**TC05: Import CSV**
+- Input: CSV file
+- Expected: Table created from CSV
+- Actual: ⏳ Pending
+
+### Non-functional Tests:
+
+**Performance:**
+- Table with 1000 rows: < 1s load time
+- Cell update: < 100ms
+- Actual: ⏳ Pending
+
+**Security:**
+- Authorization check: Must verify userId
+- Input sanitization: Must sanitize cell values
+- Actual: ⏳ Pending
+
+---
+
+## 10. CODE EXAMPLES
+
+### 10.1. Create Table
+
+```typescript
+// Usage in component
+const createTable = useMutation(api.tables.createTable);
+
+const handleCreateTable = async () => {
+  const tableId = await createTable({
+    documentId: documentId,
+    name: "Student Grades",
+    columns: [
+      { id: "col1", name: "Student Name", type: "text" },
+      { id: "col2", name: "Grade", type: "number" },
+      { id: "col3", name: "Pass/Fail", type: "checkbox" },
+    ],
+  });
+  
+  toast.success("Table created!");
+};
+```
+
+### 10.2. Update Cell
+
+```typescript
+const updateCell = useMutation(api.tables.updateCell);
+
+const handleCellUpdate = async (rowId: string, columnId: string, value: any) => {
+  await updateCell({
+    tableId: table._id,
+    rowId,
+    columnId,
+    value,
+  });
+};
 ```
 
 ---
 
-## 9. Test Cases
+## 11. SECURITY CONSIDERATIONS
 
-| Test ID | Scenario | Expected Result |
-|---------|----------|-----------------|
-| TC14-01 | Tạo bảng mới | Bảng được tạo với 3 cột mặc định |
-| TC14-02 | Thêm cột mới | Cột được thêm vào cuối |
-| TC14-03 | Xóa cột | Cột và tất cả cells bị xóa |
-| TC14-04 | Edit text cell | Giá trị được lưu |
-| TC14-05 | Edit number cell | Chỉ chấp nhận số |
-| TC14-06 | Edit date cell | Date picker hiển thị |
-| TC14-07 | Import Excel | Data được import đúng |
-| TC14-08 | Export Excel | File Excel được tạo |
-| TC14-09 | 1000 rows | Performance OK |
-| TC14-10 | Concurrent edit | Real-time sync |
+- ✅ **Authentication:** Require login for all operations
+- ✅ **Authorization:** Verify userId on all mutations
+- ✅ **Input Validation:** Sanitize cell values to prevent XSS
+- ✅ **Data Integrity:** Validate column types before saving
+- ✅ **Access Control:** Only table owner can edit
 
 ---
 
-## 10. Performance Considerations
+## 12. PERFORMANCE OPTIMIZATION
 
-### 10.1 Optimization Strategies
-
-- **Pagination:** 100 rows per page
-- **Virtualization:** Use react-window for large tables
-- **Debounce:** Cell updates debounced 300ms
-- **Batch updates:** Group multiple cell updates
-- **Lazy loading:** Load cells on demand
-
-### 10.2 Performance Targets
-
-- **Initial load:** < 2s for 1000 rows
-- **Cell edit:** < 100ms response time
-- **Import:** < 5s for 1000 rows
-- **Export:** < 3s for 1000 rows
+- ✅ **Database:** Index on documentId, userId
+- ✅ **Queries:** Use withIndex for filtering
+- ✅ **Updates:** Debounce cell updates (300ms)
+- ✅ **Rendering:** Virtual scrolling for large tables (react-window)
+- ✅ **Caching:** Convex real-time subscriptions
 
 ---
 
-## 11. Related Use Cases
+## 13. RELATED USE CASES
 
-- [UC07 - Tạo trang mới](../02-documents/UC07-create-page.md) - Similar creation flow
-- [UC16 - Xem lịch tổng quan](../04-calendar/UC16-view-calendar.md) - Similar grid view
+- **UC07:** Tạo trang mới - Table belongs to document
+- **UC08:** Cập nhật trang - Table is part of document content
+- **UC11:** Xóa trang - Cascade delete table when document archived
+- **UC12:** Khôi phục/Xóa vĩnh viễn - Handle table deletion
 
 ---
 
-**Last Updated:** 01/12/2025  
-**Status:** 🔄 Ready for implementation  
-**Estimated Effort:** 2-3 weeks
+## 14. REFERENCES
+
+- [Convex Documentation](https://docs.convex.dev/)
+- [Tanstack Table](https://tanstack.com/table/v8)
+- [CSV Parser](https://www.papaparse.com/)
+- [Implementation Guide](../UPDATE_GUIDE.md)
+
+---
+
+**Tạo bởi:** AI Assistant  
+**Ngày:** 08/12/2025  
+**Trạng thái:** Ready for implementation  
+**Ước tính:** 1.5 tuần
