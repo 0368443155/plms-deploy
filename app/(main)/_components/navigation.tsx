@@ -137,7 +137,7 @@ export const Navigation = () => {
       const promise = create({
         title: "Không có tiêu đề",
       }).then((documentId) => router.push(`/documents/${documentId}`));
-      
+
       toast.promise(promise, {
         loading: "Đang tạo ghi chú mới...",
         success: "Đã tạo ghi chú mới!",
@@ -185,9 +185,9 @@ export const Navigation = () => {
           <ChevronsLeft className="h-6 w-6" />
         </div>
         <div>
-          <Link 
-            href="/" 
-            className="flex items-center gap-x-2 px-3 py-2 mb-2 hover:bg-primary/5 rounded-sm transition-colors"
+          <Link
+            href="/"
+            className="flex items-center gap-x-2 px-3 py-2 mb-2 pr-10 hover:bg-primary/5 rounded-sm transition-colors"
           >
             <Image
               src="/logo.svg"
@@ -232,17 +232,17 @@ export const Navigation = () => {
               className="p-0 w-72"
             >
               <TrashBox />
-          </PopoverContent>
-        </Popover>
-      </div>
-      <TemplatePicker
-        open={isTemplatePickerOpen}
-        onClose={() => setIsTemplatePickerOpen(false)}
-        onSelect={(template) => {
-          handleCreate(template);
-          setIsTemplatePickerOpen(false);
-        }}
-      />
+            </PopoverContent>
+          </Popover>
+        </div>
+        <TemplatePicker
+          open={isTemplatePickerOpen}
+          onClose={() => setIsTemplatePickerOpen(false)}
+          onSelect={(template) => {
+            handleCreate(template);
+            setIsTemplatePickerOpen(false);
+          }}
+        />
         {/* To resize the sidebar */}
         <div
           onMouseDown={handleMouseDown}
