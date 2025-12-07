@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
- 
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
@@ -11,7 +11,7 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function normalizeVietnamese(str: string): string {
   if (!str) return "";
-  
+
   // Map Vietnamese characters to their non-diacritic equivalents
   const vietnameseMap: { [key: string]: string } = {
     'à': 'a', 'á': 'a', 'ạ': 'a', 'ả': 'a', 'ã': 'a',
@@ -41,7 +41,7 @@ export function normalizeVietnamese(str: string): string {
     'Ỳ': 'Y', 'Ý': 'Y', 'Ỵ': 'Y', 'Ỷ': 'Y', 'Ỹ': 'Y',
     'Đ': 'D',
   };
-  
+
   return str
     .split('')
     .map(char => vietnameseMap[char] || char)
@@ -52,12 +52,17 @@ export function normalizeVietnamese(str: string): string {
 /**
  * Check if search term matches text (case-insensitive and diacritic-insensitive)
  * Example: matches("toan", "Toán học") -> true
+ * If searchTerm is empty, returns true (show all items)
  */
 export function matchesSearch(searchTerm: string, text: string): boolean {
-  if (!searchTerm || !text) return false;
-  
-  const normalizedSearch = normalizeVietnamese(searchTerm);
+  // If no text, don't match
+  if (!text) return false;
+
+  // If no search term (empty string), show all items
+  if (!searchTerm || searchTerm.trim() === "") return true;
+
+  const normalizedSearch = normalizeVietnamese(searchTerm.trim());
   const normalizedText = normalizeVietnamese(text);
-  
+
   return normalizedText.includes(normalizedSearch);
 }

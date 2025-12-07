@@ -24,7 +24,7 @@ const DocumentsPage = () => {
       const promise = create({
         title: "Không có tiêu đề",
       }).then((documentId) => router.push(`/documents/${documentId}`));
-      
+
       toast.promise(promise, {
         loading: "Đang tạo ghi chú mới...",
         success: "Đã tạo ghi chú mới!",

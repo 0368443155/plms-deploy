@@ -26,7 +26,7 @@ export const archive = mutation({
 
     // Recursive function to archive children (optimized with Promise.all)
     const recursiveArchive = async (documentId: Id<"documents">) => {
-      // Get all children
+      // Get all children (including already archived ones to ensure consistency)
       const children = await ctx.db
         .query("documents")
         .withIndex("by_user_parent", (q) =>
@@ -35,11 +35,14 @@ export const archive = mutation({
         .collect();
 
       // Archive all children concurrently (3-5x faster than sequential)
+      // Only archive children that are not already archived
       await Promise.all(
-        children.map(async (child) => {
-          await ctx.db.patch(child._id, { isArchived: true });
-          await recursiveArchive(child._id); // Recursive call for nested children
-        })
+        children
+          .filter((child) => !child.isArchived) // Only process non-archived children
+          .map(async (child) => {
+            await ctx.db.patch(child._id, { isArchived: true });
+            await recursiveArchive(child._id); // Recursive call for nested children
+          })
       );
     };
 
@@ -124,20 +127,16 @@ export const getTrash = query({
 
     const userId = identity.subject;
 
-    // Get all documents for this user
-    const allDocuments = await ctx.db
+    // Get all documents for this user and filter archived ones
+    // Using filter in the query chain to ensure we get all archived documents
+    const archivedDocuments = await ctx.db
       .query("documents")
       .withIndex("by_user", (q) => q.eq("userId", userId))
+      .filter((q) => q.eq(q.field("isArchived"), true))
       .collect();
 
-    // Filter to only archived documents
-    // This ensures we get all archived documents regardless of parentDocument
-    const archivedDocuments = allDocuments.filter((doc) => doc.isArchived === true);
-
-    // Sort by most recently archived (assuming _creationTime exists)
-    // If not, we can use a different field or just return as is
+    // Sort by creation time descending (newest first)
     return archivedDocuments.sort((a, b) => {
-      // Sort by creation time descending (newest first)
       return b._creationTime - a._creationTime;
     });
   },
@@ -201,13 +200,14 @@ export const restore = mutation({
 
     const document = await ctx.db.patch(args.id, options);
 
-    recursiveRestore(args.id);
+    // Await recursive restore to ensure all children are restored before returning
+    await recursiveRestore(args.id);
 
     return document;
   },
 });
 
-// ro actually remove the document from the database
+// to actually remove the document from the database (hard delete)
 export const remove = mutation({
   args: { id: v.id("documents") },
   handler: async (ctx, args) => {
@@ -229,6 +229,27 @@ export const remove = mutation({
       throw new Error("Unauthorized");
     }
 
+    // Recursive function to delete children (optimized with Promise.all)
+    const recursiveDelete = async (documentId: Id<"documents">) => {
+      // Get all children (including archived ones)
+      const children = await ctx.db
+        .query("documents")
+        .withIndex("by_user_parent", (q) =>
+          q.eq("userId", userId).eq("parentDocument", documentId)
+        )
+        .collect();
+
+      // Delete all children concurrently
+      await Promise.all(
+        children.map(async (child) => {
+          await recursiveDelete(child._id); // Recursive call first to delete nested children
+          await ctx.db.delete(child._id);
+        })
+      );
+    };
+
+    // Delete all children first, then delete the parent
+    await recursiveDelete(args.id);
     const document = await ctx.db.delete(args.id);
 
     return document;
@@ -259,7 +280,7 @@ export const getSearch = query({
 // Helper function to normalize Vietnamese string (remove diacritics, lowercase)
 function normalizeVietnamese(str: string): string {
   if (!str) return "";
-  
+
   const vietnameseMap: { [key: string]: string } = {
     'à': 'a', 'á': 'a', 'ạ': 'a', 'ả': 'a', 'ã': 'a',
     'â': 'a', 'ầ': 'a', 'ấ': 'a', 'ậ': 'a', 'ẩ': 'a', 'ẫ': 'a',
@@ -288,7 +309,7 @@ function normalizeVietnamese(str: string): string {
     'Ỳ': 'Y', 'Ý': 'Y', 'Ỵ': 'Y', 'Ỷ': 'Y', 'Ỹ': 'Y',
     'Đ': 'D',
   };
-  
+
   return str
     .split('')
     .map(char => vietnameseMap[char] || char)
