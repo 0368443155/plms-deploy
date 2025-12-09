@@ -26,10 +26,9 @@ import {
 } from "@/components/ui/alert-dialog";
 
 interface AccountSettingsContentProps {
-  showAvatarUpload?: boolean;
 }
 
-export const AccountSettingsContent = ({ showAvatarUpload = false }: AccountSettingsContentProps) => {
+export const AccountSettingsContent = ({}: AccountSettingsContentProps) => {
   const { user, isLoaded: isUserLoaded } = useUser();
   const clerk = useClerk();
   const router = useRouter();
@@ -42,22 +41,13 @@ export const AccountSettingsContent = ({ showAvatarUpload = false }: AccountSett
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   
-  // Username state
-  const [username, setUsername] = useState("");
-  const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
-  
   // Sync state with user data
   useEffect(() => {
     if (user) {
       setFirstName(user.firstName || "");
       setLastName(user.lastName || "");
-      setUsername(user.username || "");
     }
   }, [user]);
-  
-  // Email state
-  const [newEmail, setNewEmail] = useState("");
-  const [isAddingEmail, setIsAddingEmail] = useState(false);
   
   // Password state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -120,38 +110,6 @@ export const AccountSettingsContent = ({ showAvatarUpload = false }: AccountSett
     }
   };
 
-  const handleUpdateUsername = async () => {
-    if (!user) return;
-    
-    setIsUpdatingUsername(true);
-    try {
-      await user.update({
-        username: username.trim() || undefined,
-      });
-      toast.success("Đã cập nhật username");
-      router.refresh();
-    } catch (error: any) {
-      toast.error(error?.errors?.[0]?.message || "Không thể cập nhật username");
-    } finally {
-      setIsUpdatingUsername(false);
-    }
-  };
-
-  const handleAddEmail = async () => {
-    if (!user || !newEmail.trim()) return;
-    
-    setIsAddingEmail(true);
-    try {
-      await user.createEmailAddress({ email: newEmail.trim() });
-      toast.success("Đã thêm email. Vui lòng kiểm tra email để xác thực.");
-      setNewEmail("");
-      router.refresh();
-    } catch (error: any) {
-      toast.error(error?.errors?.[0]?.message || "Không thể thêm email");
-    } finally {
-      setIsAddingEmail(false);
-    }
-  };
 
   const handleSetPrimaryEmail = async (emailId: string) => {
     if (!user) return;
@@ -311,25 +269,23 @@ export const AccountSettingsContent = ({ showAvatarUpload = false }: AccountSett
               </div>
             </div>
             
-            {/* Avatar Upload - chỉ hiển thị nếu showAvatarUpload = true */}
-            {showAvatarUpload && (
-              <div className="space-y-2 mb-4">
-                <Label>Ảnh đại diện</Label>
-                <SingleImageDropzone
-                  width={200}
-                  height={200}
-                  value={avatarFile || user?.imageUrl}
-                  onChange={handleAvatarUpload}
-                  disabled={isUploadingAvatar}
-                  dropzoneOptions={{
-                    maxSize: 5 * 1024 * 1024, // 5MB
-                  }}
-                />
-                {isUploadingAvatar && (
-                  <p className="text-sm text-muted-foreground">Đang tải lên...</p>
-                )}
-              </div>
-            )}
+            {/* Avatar Upload */}
+            <div className="space-y-2 mb-4">
+              <Label>Ảnh đại diện</Label>
+              <SingleImageDropzone
+                width={200}
+                height={200}
+                value={avatarFile || user?.imageUrl}
+                onChange={handleAvatarUpload}
+                disabled={isUploadingAvatar}
+                dropzoneOptions={{
+                  maxSize: 5 * 1024 * 1024, // 5MB
+                }}
+              />
+              {isUploadingAvatar && (
+                <p className="text-sm text-muted-foreground">Đang tải lên...</p>
+              )}
+            </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -373,39 +329,6 @@ export const AccountSettingsContent = ({ showAvatarUpload = false }: AccountSett
           </div>
         </div>
 
-        {/* Username Section */}
-        <div className="space-y-4 border-t pt-4">
-          <div>
-            <h3 className="text-lg font-medium mb-2">Username</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              {user?.username ? `Username hiện tại: ${user.username}` : "Chưa có username"}
-            </p>
-            <div className="flex gap-2">
-              <Input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Nhập username"
-                className="flex-1"
-              />
-              <Button
-                onClick={handleUpdateUsername}
-                disabled={isUpdatingUsername || username === user?.username}
-              >
-                {isUpdatingUsername ? (
-                  <>
-                    <span className="mr-2">
-                      <Spinner size="sm" />
-                    </span>
-                    Đang cập nhật...
-                  </>
-                ) : (
-                  user?.username ? "Cập nhật" : "Đặt username"
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-
         {/* Email Addresses Section */}
         <div className="space-y-4 border-t pt-4">
           <div>
@@ -441,30 +364,6 @@ export const AccountSettingsContent = ({ showAvatarUpload = false }: AccountSett
                   )}
                 </div>
               ))}
-            </div>
-            <div className="flex gap-2">
-              <Input
-                type="email"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                placeholder="Thêm email mới"
-                className="flex-1"
-              />
-              <Button
-                onClick={handleAddEmail}
-                disabled={isAddingEmail || !newEmail.trim()}
-              >
-                {isAddingEmail ? (
-                  <>
-                    <span className="mr-2">
-                      <Spinner size="sm" />
-                    </span>
-                    Đang thêm...
-                  </>
-                ) : (
-                  "Thêm email"
-                )}
-              </Button>
             </div>
           </div>
         </div>

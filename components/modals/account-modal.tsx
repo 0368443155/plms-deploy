@@ -17,7 +17,7 @@ export const AccountModal = () => {
           </p>
         </DialogHeader>
         
-        <AccountSettingsContent showAvatarUpload={true} />
+        <AccountSettingsContent />
       </DialogContent>
     </Dialog>
   );
