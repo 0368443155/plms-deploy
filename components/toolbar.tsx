@@ -10,6 +10,8 @@ import { api } from "@/convex/_generated/api";
 import TextareaAutosize from "react-textarea-autosize";
 import { useCoverImage } from "@/hooks/use-cover-image";
 import { ExportMenu } from "@/components/export-menu";
+import { SummarizeButton } from "@/components/ai/summarize-button";
+import { ChatButton } from "@/components/ai/chat-button";
 
 interface ToolbarProps {
   initialData: Doc<"documents">;
@@ -112,7 +114,11 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
           </Button>
         )}
         {!preview && (
-          <ExportMenu documentTitle={initialData.title || "document"} />
+          <>
+            <SummarizeButton documentId={initialData._id} />
+            <ChatButton documentId={initialData._id} />
+            <ExportMenu documentTitle={initialData.title || "document"} />
+          </>
         )}
       </div>
       {isEditing && !preview ? (

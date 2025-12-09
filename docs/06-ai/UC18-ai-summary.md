@@ -87,7 +87,6 @@ export default defineSchema({
     summary: v.string(),                 // AI-generated summary
     contentHash: v.string(),             // Hash of content to detect changes
     model: v.string(),                   // AI model used (e.g., "gemini-pro")
-    tokenCount: v.optional(v.number()),  // Tokens used
     createdAt: v.number(),
   })
     .index("by_document", ["documentId"])

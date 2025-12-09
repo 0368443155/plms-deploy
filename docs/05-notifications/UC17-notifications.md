@@ -88,7 +88,6 @@ export default defineSchema({
     actionUrl: v.optional(v.string()),       // URL to navigate to
     priority: v.optional(v.string()),        // "low" | "medium" | "high"
     createdAt: v.number(),
-    expiresAt: v.optional(v.number()),       // Auto-delete after this time
   })
     .index("by_user", ["userId"])
     .index("by_user_read", ["userId", "isRead"])

@@ -9,6 +9,8 @@ import {
   Search,
   Settings,
   Trash,
+  Calendar,
+  Table2,
 } from "lucide-react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { ElementRef, useEffect, useRef, useState } from "react";
@@ -214,6 +216,24 @@ export const Navigation = () => {
             onClick={search.onOpen}
           />
           <Item label="Cài đặt" icon={Settings} onClick={settings.onOpen} />
+          <Item
+            label="Lịch học"
+            icon={Calendar}
+            onClick={() => router.push("/schedule")}
+            active={pathname === "/schedule"}
+          />
+          <Item
+            label="Lịch tổng quan"
+            icon={Calendar}
+            onClick={() => router.push("/calendar")}
+            active={pathname === "/calendar"}
+          />
+          <Item
+            label="Bảng dữ liệu"
+            icon={Table2}
+            onClick={() => router.push("/tables")}
+            active={pathname?.startsWith("/tables")}
+          />
           <Item
             onClick={handleCreateWithTemplate}
             label="Trang mới"

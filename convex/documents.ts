@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalQuery, mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 
 // to set the isArchived to true
@@ -387,6 +387,15 @@ export const getById = query({
       throw new Error("Unauthorized");
     }
 
+    return document;
+  },
+});
+
+// Internal version for use in actions
+export const getByIdInternal = internalQuery({
+  args: { documentId: v.id("documents") },
+  handler: async (ctx, args) => {
+    const document = await ctx.db.get(args.documentId);
     return document;
   },
 });
