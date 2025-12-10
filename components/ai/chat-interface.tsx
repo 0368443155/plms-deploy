@@ -40,7 +40,6 @@ export const ChatInterface = ({
   const [currentSessionId, setCurrentSessionId] = useState<
     Id<"chatSessions"> | null
   >(null);
-  const [localMessages, setLocalMessages] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -52,30 +51,13 @@ export const ChatInterface = ({
     }
   }, [sessions, currentSessionId]);
 
-  // Load messages when session changes
-  useEffect(() => {
-    if (currentSessionId && messages) {
-      setLocalMessages(messages);
-    } else if (!currentSessionId) {
-      setLocalMessages([]);
-    }
-  }, [currentSessionId, messages]);
-
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [localMessages]);
+  }, [messages]);
 
   const handleSendMessage = async (message: string) => {
     if (!message.trim()) return;
-
-    // Add user message to UI immediately
-    const userMessage = {
-      role: "user" as const,
-      content: message,
-      createdAt: Date.now(),
-    };
-    setLocalMessages((prev) => [...prev, userMessage]);
 
     setIsLoading(true);
 
@@ -91,19 +73,11 @@ export const ChatInterface = ({
         setCurrentSessionId(result.sessionId);
       }
 
-      // Add assistant message
-      const assistantMessage = {
-        role: "assistant" as const,
-        content: result.response,
-        createdAt: Date.now(),
-      };
-      setLocalMessages((prev) => [...prev, assistantMessage]);
+      // Messages will automatically appear via useQuery
+      // No manual state updates needed - DB is source of truth!
     } catch (error: any) {
       console.error("Chat error:", error);
       toast.error(error.message || "Không thể gửi tin nhắn");
-
-      // Remove user message on error
-      setLocalMessages((prev) => prev.slice(0, -1));
     } finally {
       setIsLoading(false);
     }
@@ -111,10 +85,9 @@ export const ChatInterface = ({
 
   const handleNewSession = () => {
     setCurrentSessionId(null);
-    setLocalMessages([]);
   };
 
-  const displayMessages = localMessages.length > 0 ? localMessages : [];
+  const displayMessages = messages || [];
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -151,7 +124,7 @@ export const ChatInterface = ({
           ) : (
             <div className="space-y-4">
               {displayMessages.map((msg, index) => (
-                <ChatMessage key={index} message={msg} />
+                <ChatMessage key={msg._id || index} message={msg} />
               ))}
               {isLoading && (
                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -175,4 +148,3 @@ export const ChatInterface = ({
     </Dialog>
   );
 };
-
