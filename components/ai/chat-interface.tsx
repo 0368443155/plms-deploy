@@ -124,7 +124,14 @@ export const ChatInterface = ({
           ) : (
             <div className="space-y-4">
               {displayMessages.map((msg, index) => (
-                <ChatMessage key={msg._id || index} message={msg} />
+                <ChatMessage
+                  key={msg._id || index}
+                  message={{
+                    role: msg.role as "user" | "assistant",
+                    content: msg.content,
+                    createdAt: msg.createdAt,
+                  }}
+                />
               ))}
               {isLoading && (
                 <div className="flex items-center gap-2 text-muted-foreground">
