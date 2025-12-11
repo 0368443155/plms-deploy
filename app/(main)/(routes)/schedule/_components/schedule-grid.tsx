@@ -41,14 +41,18 @@ export const ScheduleGrid = () => {
   const getSchedulesForSlot = (dayOfWeek: number, hour: number): Doc<"schedules">[] => {
     if (!schedules) return [];
 
+    const slotStart = `${hour.toString().padStart(2, "0")}:00`;
+    const slotEnd = `${(hour + 1).toString().padStart(2, "0")}:00`;
+
     return schedules.filter((schedule) => {
-      const scheduleStartHour = parseInt(schedule.startTime.split(":")[0]);
-      const scheduleEndHour = parseInt(schedule.endTime.split(":")[0]);
-      return (
-        schedule.dayOfWeek === dayOfWeek &&
-        scheduleStartHour <= hour &&
-        hour < scheduleEndHour
-      );
+      // Check if schedule is on the same day
+      if (schedule.dayOfWeek !== dayOfWeek) return false;
+
+      // Check if schedule overlaps with this hour slot
+      // Schedule overlaps if:
+      // - Schedule starts before slot ends (schedule.startTime < slotEnd)
+      // - AND schedule ends after slot starts (schedule.endTime > slotStart)
+      return schedule.startTime < slotEnd && schedule.endTime > slotStart;
     });
   };
 
