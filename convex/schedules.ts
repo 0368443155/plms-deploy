@@ -8,13 +8,18 @@ function isValidTimeFormat(time: string): boolean {
 }
 
 // Helper function to check if two time ranges overlap
+// Allows adjacent schedules (e.g., 07:00-09:00 and 09:00-10:00 are OK)
 function timeRangesOverlap(
   start1: string,
   end1: string,
   start2: string,
   end2: string
 ): boolean {
-  return start1 < end2 && start2 < end1;
+  // Overlap occurs when:
+  // - start1 is before end2 (schedule 1 starts before schedule 2 ends)
+  // - AND end1 is after start2 (schedule 1 ends after schedule 2 starts)
+  // BUT we allow equal boundaries (end1 === start2 or end2 === start1)
+  return start1 < end2 && end1 > start2;
 }
 
 // Helper function to check for schedule conflicts
@@ -27,7 +32,7 @@ async function checkScheduleConflict(
     startTime: string;
     endTime: string;
   }
-): Promise<boolean> {
+): Promise<{ hasConflict: boolean; conflictingSchedule?: any }> {
   const existingSchedules = await ctx.db
     .query("schedules")
     .withIndex("by_user_day", (q: any) =>
@@ -41,6 +46,12 @@ async function checkScheduleConflict(
       continue;
     }
 
+    // Skip invalid schedules (startTime >= endTime) - these are data issues
+    if (existing.startTime >= existing.endTime) {
+      console.warn(`Invalid schedule found: ${existing._id} - startTime (${existing.startTime}) >= endTime (${existing.endTime})`);
+      continue;
+    }
+
     if (
       timeRangesOverlap(
         schedule.startTime,
@@ -49,11 +60,11 @@ async function checkScheduleConflict(
         existing.endTime
       )
     ) {
-      return true;
+      return { hasConflict: true, conflictingSchedule: existing };
     }
   }
 
-  return false;
+  return { hasConflict: false };
 }
 
 /**
@@ -95,7 +106,7 @@ export const create = mutation({
     }
 
     // Check for conflicts
-    const conflict = await checkScheduleConflict(
+    const conflictResult = await checkScheduleConflict(
       ctx,
       userId,
       null,
@@ -106,8 +117,12 @@ export const create = mutation({
       }
     );
 
-    if (conflict) {
-      throw new Error("Schedule conflict detected. Another schedule overlaps with this time slot");
+    if (conflictResult.hasConflict) {
+      const conflicting = conflictResult.conflictingSchedule;
+      const errorMessage = conflicting
+        ? `Schedule conflict detected. Another schedule "${conflicting.subjectName}" (${conflicting.startTime} - ${conflicting.endTime}) overlaps with this time slot (${args.startTime} - ${args.endTime})`
+        : "Schedule conflict detected. Another schedule overlaps with this time slot";
+      throw new Error(errorMessage);
     }
 
     const scheduleId = await ctx.db.insert("schedules", {
@@ -155,6 +170,38 @@ export const getAll = query({
     });
   },
 });
+
+/**
+ * DEBUG: Get all schedules with full details (including IDs)
+ * Use this to identify duplicate schedules
+ */
+export const getAllDebug = query({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+
+    const schedules = await ctx.db
+      .query("schedules")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    // Return with full details for debugging
+    return schedules.map((s) => ({
+      _id: s._id,
+      subjectName: s.subjectName,
+      dayOfWeek: s.dayOfWeek,
+      startTime: s.startTime,
+      endTime: s.endTime,
+      createdAt: new Date(s.createdAt).toISOString(),
+      updatedAt: new Date(s.updatedAt).toISOString(),
+    }));
+  },
+});
+
 
 /**
  * Get schedules for a specific day
@@ -273,15 +320,19 @@ export const update = mutation({
         throw new Error("Start time must be before end time");
       }
 
-      const conflict = await checkScheduleConflict(
+      const conflictResult = await checkScheduleConflict(
         ctx,
         userId,
         id,
         newSchedule
       );
 
-      if (conflict) {
-        throw new Error("Schedule conflict detected. Another schedule overlaps with this time slot");
+      if (conflictResult.hasConflict) {
+        const conflicting = conflictResult.conflictingSchedule;
+        const errorMessage = conflicting
+          ? `Schedule conflict detected. Another schedule "${conflicting.subjectName}" (${conflicting.startTime} - ${conflicting.endTime}) overlaps with this time slot (${newSchedule.startTime} - ${newSchedule.endTime})`
+          : "Schedule conflict detected. Another schedule overlaps with this time slot";
+        throw new Error(errorMessage);
       }
     }
 
@@ -319,3 +370,56 @@ export const remove = mutation({
   },
 });
 
+/**
+ * UTILITY: Remove duplicate schedules
+ * Keeps the oldest schedule (by createdAt) and removes duplicates
+ */
+export const removeDuplicates = mutation({
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+
+    // Get all schedules
+    const schedules = await ctx.db
+      .query("schedules")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    // Group by unique key (dayOfWeek + startTime + endTime + subjectName)
+    const groups = new Map<string, typeof schedules>();
+
+    for (const schedule of schedules) {
+      const key = `${schedule.dayOfWeek}-${schedule.startTime}-${schedule.endTime}-${schedule.subjectName}`;
+
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(schedule);
+    }
+
+    // Find and delete duplicates
+    let deletedCount = 0;
+
+    for (const [key, group] of Array.from(groups.entries())) {
+      if (group.length > 1) {
+        // Sort by createdAt (keep oldest)
+        group.sort((a, b) => a.createdAt - b.createdAt);
+
+        // Delete all except the first (oldest)
+        for (let i = 1; i < group.length; i++) {
+          await ctx.db.delete(group[i]._id);
+          deletedCount++;
+        }
+      }
+    }
+
+    return {
+      message: `Removed ${deletedCount} duplicate schedule(s)`,
+      deletedCount,
+    };
+  },
+});
