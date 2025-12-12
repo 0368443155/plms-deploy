@@ -65,12 +65,26 @@ export const EventModal = ({
       setDescription(event.description || "");
       const start = new Date(event.startDate);
       const end = new Date(event.endDate);
-      setStartDate(start.toISOString().split("T")[0]);
-      setStartTime(
-        start.toTimeString().split(":").slice(0, 2).join(":") || ""
-      );
-      setEndDate(end.toISOString().split("T")[0]);
-      setEndTime(end.toTimeString().split(":").slice(0, 2).join(":") || "");
+
+      // Use local date formatting to avoid timezone issues
+      // Format: YYYY-MM-DD for date input
+      const formatLocalDate = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      const formatLocalTime = (date: Date) => {
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+      };
+
+      setStartDate(formatLocalDate(start));
+      setStartTime(formatLocalTime(start));
+      setEndDate(formatLocalDate(end));
+      setEndTime(formatLocalTime(end));
       setAllDay(event.allDay || false);
       setType(event.type || "custom");
       setLocation(event.location || "");
@@ -78,19 +92,38 @@ export const EventModal = ({
       // Creating new event from calendar slot
       const start = defaultValues.start;
       const end = defaultValues.end;
-      setStartDate(start.toISOString().split("T")[0]);
-      setStartTime(
-        start.toTimeString().split(":").slice(0, 2).join(":") || ""
-      );
-      setEndDate(end.toISOString().split("T")[0]);
-      setEndTime(end.toTimeString().split(":").slice(0, 2).join(":") || "");
+
+      const formatLocalDate = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      const formatLocalTime = (date: Date) => {
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+      };
+
+      setStartDate(formatLocalDate(start));
+      setStartTime(formatLocalTime(start));
+      setEndDate(formatLocalDate(end));
+      setEndTime(formatLocalTime(end));
       setAllDay(defaultValues.allDay || false);
     } else {
       // New event (manual)
       const now = new Date();
-      setStartDate(now.toISOString().split("T")[0]);
+      const formatLocalDate = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      setStartDate(formatLocalDate(now));
       setStartTime("09:00");
-      setEndDate(now.toISOString().split("T")[0]);
+      setEndDate(formatLocalDate(now));
       setEndTime("10:00");
       setAllDay(false);
     }
