@@ -148,6 +148,12 @@ export const AccountSettingsContent = ({ }: AccountSettingsContentProps) => {
       return;
     }
 
+    // Kiểm tra mật khẩu mới không được trùng với mật khẩu hiện tại
+    if (currentPassword === newPassword) {
+      toast.error("Mật khẩu mới không được trùng với mật khẩu hiện tại");
+      return;
+    }
+
     setIsChangingPassword(true);
     try {
       // Đảm bảo user object được refresh trước khi update
