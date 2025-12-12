@@ -28,19 +28,19 @@ import {
 interface AccountSettingsContentProps {
 }
 
-export const AccountSettingsContent = ({}: AccountSettingsContentProps) => {
+export const AccountSettingsContent = ({ }: AccountSettingsContentProps) => {
   const { user, isLoaded: isUserLoaded } = useUser();
   const clerk = useClerk();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("account");
-  
+
   // Profile state
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | undefined>(undefined);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
-  
+
   // Sync state with user data
   useEffect(() => {
     if (user) {
@@ -48,37 +48,37 @@ export const AccountSettingsContent = ({}: AccountSettingsContentProps) => {
       setLastName(user.lastName || "");
     }
   }, [user]);
-  
+
   // Password state
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  
+
   // Delete account state
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const handleAvatarUpload = async (file?: File) => {
     if (!file || !user) return;
-    
+
     // Validate file type
     if (!file.type.startsWith("image/")) {
       toast.error("Chỉ chấp nhận file ảnh");
       return;
     }
-    
+
     // Validate file size (5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error("Kích thước ảnh không được vượt quá 5MB");
       return;
     }
-    
+
     setIsUploadingAvatar(true);
     try {
       // Upload avatar trực tiếp lên Clerk sử dụng Clerk API
       await user.setProfileImage({ file });
-      
+
       toast.success("Đã cập nhật ảnh đại diện");
       setAvatarFile(undefined);
       router.refresh();
@@ -92,14 +92,14 @@ export const AccountSettingsContent = ({}: AccountSettingsContentProps) => {
 
   const handleUpdateProfile = async () => {
     if (!user) return;
-    
+
     setIsUpdatingProfile(true);
     try {
       const updateData: any = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
       };
-      
+
       await user.update(updateData);
       toast.success("Đã cập nhật thông tin cá nhân");
       router.refresh();
@@ -113,7 +113,7 @@ export const AccountSettingsContent = ({}: AccountSettingsContentProps) => {
 
   const handleSetPrimaryEmail = async (emailId: string) => {
     if (!user) return;
-    
+
     try {
       const emailAddress = user.emailAddresses.find(e => e.id === emailId);
       if (emailAddress && emailAddress.verification?.status === "verified") {
@@ -132,40 +132,40 @@ export const AccountSettingsContent = ({}: AccountSettingsContentProps) => {
       toast.error("Vui lòng đợi hệ thống tải thông tin người dùng");
       return;
     }
-    
+
     if (newPassword !== confirmPassword) {
       toast.error("Mật khẩu xác nhận không khớp");
       return;
     }
-    
+
     if (newPassword.length < 8) {
       toast.error("Mật khẩu phải có ít nhất 8 ký tự");
       return;
     }
-    
+
     if (!currentPassword) {
       toast.error("Vui lòng nhập mật khẩu hiện tại");
       return;
     }
-    
+
     setIsChangingPassword(true);
     try {
       // Đảm bảo user object được refresh trước khi update
       await user.reload();
-      
+
       // Kiểm tra xem user có password strategy không
       const hasPassword = user.passwordEnabled;
       if (!hasPassword) {
         toast.error("Tài khoản của bạn không có mật khẩu. Vui lòng đặt mật khẩu từ trang đăng nhập.");
         return;
       }
-      
+
       await user.updatePassword({
         currentPassword,
         newPassword,
         signOutOfOtherSessions: false, // Không đăng xuất khỏi các thiết bị khác
       });
-      
+
       toast.success("Đã đổi mật khẩu thành công");
       setCurrentPassword("");
       setNewPassword("");
@@ -173,11 +173,11 @@ export const AccountSettingsContent = ({}: AccountSettingsContentProps) => {
       router.refresh();
     } catch (error: any) {
       console.error("Change password error:", error);
-      
+
       // Xử lý các lỗi cụ thể
       const errorCode = error?.errors?.[0]?.code;
       const errorMessage = error?.errors?.[0]?.message || error?.message;
-      
+
       switch (errorCode) {
         case "form_password_incorrect":
           toast.error("Mật khẩu hiện tại không đúng");
@@ -206,22 +206,22 @@ export const AccountSettingsContent = ({}: AccountSettingsContentProps) => {
 
   const handleDeleteAccount = async () => {
     if (!user) return;
-    
+
     setIsDeletingAccount(true);
     try {
       // Gọi trực tiếp Clerk API từ client-side
       // Clerk sẽ tự động xử lý reverification nếu cần
       await user.delete();
-      
+
       toast.success("Tài khoản đã được xóa thành công");
       // Redirect về trang chủ sau khi xóa
       window.location.href = "/";
     } catch (error: any) {
       console.error("Delete account error:", error);
-      
+
       const errorCode = error?.errors?.[0]?.code;
       const errorMessage = error?.errors?.[0]?.message || error?.message;
-      
+
       // Xử lý lỗi reverification
       if (errorCode === "session_reverification_required") {
         // Clerk yêu cầu reverification - yêu cầu người dùng đăng nhập lại
@@ -268,7 +268,7 @@ export const AccountSettingsContent = ({}: AccountSettingsContentProps) => {
                 <p className="text-sm text-muted-foreground">{user?.emailAddresses[0]?.emailAddress}</p>
               </div>
             </div>
-            
+
             {/* Avatar Upload */}
             <div className="space-y-2 mb-4">
               <Label>Ảnh đại diện</Label>
@@ -286,7 +286,7 @@ export const AccountSettingsContent = ({}: AccountSettingsContentProps) => {
                 <p className="text-sm text-muted-foreground">Đang tải lên...</p>
               )}
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">Họ</Label>
@@ -310,7 +310,7 @@ export const AccountSettingsContent = ({}: AccountSettingsContentProps) => {
             <Button
               onClick={handleUpdateProfile}
               disabled={isUpdatingProfile || (
-                firstName === user?.firstName && 
+                firstName === user?.firstName &&
                 lastName === user?.lastName
               )}
               className="mt-4"
@@ -397,6 +397,7 @@ export const AccountSettingsContent = ({}: AccountSettingsContentProps) => {
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="Nhập mật khẩu hiện tại"
+                    autoComplete="current-password"
                   />
                   <Button
                     type="button"
@@ -422,6 +423,7 @@ export const AccountSettingsContent = ({}: AccountSettingsContentProps) => {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Tối thiểu 8 ký tự"
+                    autoComplete="new-password"
                   />
                   <Button
                     type="button"
@@ -447,6 +449,7 @@ export const AccountSettingsContent = ({}: AccountSettingsContentProps) => {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Nhập lại mật khẩu mới"
+                    autoComplete="new-password"
                   />
                   <Button
                     type="button"
