@@ -66,3 +66,51 @@ export function matchesSearch(searchTerm: string, text: string): boolean {
 
   return normalizedText.includes(normalizedSearch);
 }
+
+/**
+ * Validate name (first name or last name)
+ * Rules:
+ * - Not empty
+ * - Only letters (Vietnamese characters allowed)
+ * - No numbers
+ * - No special characters (except spaces and Vietnamese diacritics)
+ * - No HTML tags
+ */
+export function validateName(name: string): { valid: boolean; error?: string } {
+  // Check if empty
+  if (!name || name.trim() === "") {
+    return { valid: false, error: "Tên không được để trống" };
+  }
+
+  const trimmedName = name.trim();
+
+  // Check for HTML tags
+  if (/<[^>]*>/g.test(trimmedName)) {
+    return { valid: false, error: "Tên không được chứa thẻ HTML" };
+  }
+
+  // Check for numbers
+  if (/\d/.test(trimmedName)) {
+    return { valid: false, error: "Tên không được chứa số" };
+  }
+
+  // Check for special characters (allow only letters, spaces, and Vietnamese diacritics)
+  // Vietnamese letters: a-z, A-Z, and Vietnamese diacritics
+  const vietnameseNamePattern = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s]+$/;
+
+  if (!vietnameseNamePattern.test(trimmedName)) {
+    return { valid: false, error: "Tên chỉ được chứa chữ cái" };
+  }
+
+  // Check minimum length
+  if (trimmedName.length < 2) {
+    return { valid: false, error: "Tên phải có ít nhất 2 ký tự" };
+  }
+
+  // Check maximum length
+  if (trimmedName.length > 50) {
+    return { valid: false, error: "Tên không được quá 50 ký tự" };
+  }
+
+  return { valid: true };
+}

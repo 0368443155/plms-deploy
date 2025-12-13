@@ -11,6 +11,7 @@ import { Spinner } from "@/components/spinner";
 import { toast } from "sonner";
 import { Logo } from "../../_components/logo";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { validateName } from "@/lib/utils";
 
 export default function SignUpPage() {
   const { signUp, isLoaded, setActive } = useSignUp();
@@ -38,9 +39,23 @@ export default function SignUpPage() {
     e.preventDefault();
     if (!isLoaded || !signUp) return;
 
+    // Validate first name
+    const firstNameValidation = validateName(firstName);
+    if (!firstNameValidation.valid) {
+      toast.error(firstNameValidation.error, { duration: 3000 });
+      return;
+    }
+
+    // Validate last name
+    const lastNameValidation = validateName(lastName);
+    if (!lastNameValidation.valid) {
+      toast.error(lastNameValidation.error, { duration: 3000 });
+      return;
+    }
+
     // Validate password confirmation
     if (password !== confirmPassword) {
-      toast.error("Mật khẩu xác nhận không khớp. Vui lòng thử lại.");
+      toast.error("Mật khẩu xác nhận không khớp. Vui lòng thử lại.", { duration: 3000 });
       return;
     }
 
@@ -60,7 +75,7 @@ export default function SignUpPage() {
       if (signUp.status === "complete") {
         if (signUp.createdSessionId && setActive) {
           await setActive({ session: signUp.createdSessionId });
-          toast.success("Đăng ký thành công!");
+          toast.success("Đăng ký thành công!", { duration: 3000 });
           router.push("/documents");
           return;
         }
@@ -72,36 +87,36 @@ export default function SignUpPage() {
           // Thử gửi email verification
           await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
           setPendingVerification(true);
-          toast.success("Vui lòng kiểm tra email để xác thực tài khoản");
+          toast.success("Vui lòng kiểm tra email để xác thực tài khoản", { duration: 3000 });
         } catch (verifyErr: any) {
           console.error("Verification error:", verifyErr);
           // Nếu không thể gửi verification, nhưng có session thì vẫn set active
           if (signUp.createdSessionId && setActive) {
             await setActive({ session: signUp.createdSessionId });
-            toast.success("Đăng ký thành công!");
+            toast.success("Đăng ký thành công!", { duration: 3000 });
             router.push("/documents");
           } else {
             const errorMessage = verifyErr?.errors?.[0]?.longMessage || verifyErr?.message || "Không thể gửi email xác thực. Vui lòng thử lại.";
-            toast.error(errorMessage);
+            toast.error(errorMessage, { duration: 3000 });
           }
         }
       } else {
         // Trạng thái khác, thử set active nếu có session
         if (signUp.createdSessionId && setActive) {
           await setActive({ session: signUp.createdSessionId });
-          toast.success("Đăng ký thành công!");
+          toast.success("Đăng ký thành công!", { duration: 3000 });
           router.push("/documents");
         } else {
-          toast.error("Đăng ký không thành công. Vui lòng thử lại.");
+          toast.error("Đăng ký không thành công. Vui lòng thử lại.", { duration: 3000 });
         }
       }
     } catch (err: any) {
       console.error("Sign up error:", err);
-      
+
       // Xử lý error theo đặc tả UC02
       const errorCode = err?.errors?.[0]?.code;
       let errorMessage = "Đăng ký thất bại. Vui lòng thử lại.";
-      
+
       switch (errorCode) {
         case "form_identifier_exists":
           errorMessage = "Email này đã được đăng ký. Vui lòng đăng nhập hoặc sử dụng email khác.";
@@ -121,7 +136,7 @@ export default function SignUpPage() {
         default:
           errorMessage = err?.errors?.[0]?.longMessage || err?.message || errorMessage;
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -140,20 +155,20 @@ export default function SignUpPage() {
       if (result.status === "complete") {
         if (result.createdSessionId && setActive) {
           await setActive({ session: result.createdSessionId });
-          toast.success("Đăng ký thành công!");
+          toast.success("Đăng ký thành công!", { duration: 3000 });
           router.push("/documents");
         } else {
-          toast.error("Không thể tạo session. Vui lòng thử lại.");
+          toast.error("Không thể tạo session. Vui lòng thử lại.", { duration: 3000 });
         }
       } else {
-        toast.error("Mã xác thực không đúng. Vui lòng thử lại.");
+        toast.error("Mã xác thực không đúng. Vui lòng thử lại.", { duration: 3000 });
       }
     } catch (err: any) {
       console.error("Verification error:", err);
-      
+
       const errorCode = err?.errors?.[0]?.code;
       let errorMessage = "Xác thực thất bại. Vui lòng thử lại.";
-      
+
       switch (errorCode) {
         case "form_code_incorrect":
           errorMessage = "Mã xác thực không đúng. Vui lòng thử lại.";
@@ -164,7 +179,7 @@ export default function SignUpPage() {
         default:
           errorMessage = err?.errors?.[0]?.longMessage || err?.message || errorMessage;
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);

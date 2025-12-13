@@ -13,6 +13,7 @@ import { Spinner } from "@/components/spinner";
 import { User, Shield, Mail, Eye, EyeOff, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { SingleImageDropzone } from "@/components/single-image-dropzone";
+import { validateName } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -93,6 +94,20 @@ export const AccountSettingsContent = ({ }: AccountSettingsContentProps) => {
   const handleUpdateProfile = async () => {
     if (!user) return;
 
+    // Validate first name
+    const firstNameValidation = validateName(firstName);
+    if (!firstNameValidation.valid) {
+      toast.error(firstNameValidation.error, { duration: 3000 });
+      return;
+    }
+
+    // Validate last name
+    const lastNameValidation = validateName(lastName);
+    if (!lastNameValidation.valid) {
+      toast.error(lastNameValidation.error, { duration: 3000 });
+      return;
+    }
+
     setIsUpdatingProfile(true);
     try {
       const updateData: any = {
@@ -101,10 +116,11 @@ export const AccountSettingsContent = ({ }: AccountSettingsContentProps) => {
       };
 
       await user.update(updateData);
-      toast.success("Đã cập nhật thông tin cá nhân");
+      toast.success("Đã cập nhật thông tin cá nhân", { duration: 3000 });
       router.refresh();
     } catch (error: any) {
-      toast.error(error?.errors?.[0]?.message || "Không thể cập nhật thông tin");
+      const errorMessage = error?.errors?.[0]?.message || "Không thể cập nhật thông tin";
+      toast.error(errorMessage, { duration: 3000 });
     } finally {
       setIsUpdatingProfile(false);
     }
@@ -117,40 +133,40 @@ export const AccountSettingsContent = ({ }: AccountSettingsContentProps) => {
     try {
       const emailAddress = user.emailAddresses.find(e => e.id === emailId);
       if (emailAddress && emailAddress.verification?.status === "verified") {
-        toast("Email này sẽ trở thành email chính sau khi được xác thực");
+        toast("Email này sẽ trở thành email chính sau khi được xác thực", { duration: 3000 });
         router.refresh();
       } else {
-        toast.error("Vui lòng xác thực email trước");
+        toast.error("Vui lòng xác thực email trước", { duration: 3000 });
       }
     } catch (error: any) {
-      toast.error(error?.errors?.[0]?.message || "Không thể đặt email chính");
+      toast.error(error?.errors?.[0]?.message || "Không thể đặt email chính", { duration: 3000 });
     }
   };
 
   const handleChangePassword = async () => {
     if (!user || !isUserLoaded) {
-      toast.error("Vui lòng đợi hệ thống tải thông tin người dùng");
+      toast.error("Vui lòng đợi hệ thống tải thông tin người dùng", { duration: 3000 });
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast.error("Mật khẩu xác nhận không khớp");
+      toast.error("Mật khẩu xác nhận không khớp", { duration: 3000 });
       return;
     }
 
     if (newPassword.length < 8) {
-      toast.error("Mật khẩu phải có ít nhất 8 ký tự");
+      toast.error("Mật khẩu phải có ít nhất 8 ký tự", { duration: 3000 });
       return;
     }
 
     if (!currentPassword) {
-      toast.error("Vui lòng nhập mật khẩu hiện tại");
+      toast.error("Vui lòng nhập mật khẩu hiện tại", { duration: 3000 });
       return;
     }
 
     // Kiểm tra mật khẩu mới không được trùng với mật khẩu hiện tại
     if (currentPassword === newPassword) {
-      toast.error("Mật khẩu mới không được trùng với mật khẩu hiện tại");
+      toast.error("Mật khẩu mới không được trùng với mật khẩu hiện tại", { duration: 3000 });
       return;
     }
 
@@ -162,7 +178,7 @@ export const AccountSettingsContent = ({ }: AccountSettingsContentProps) => {
       // Kiểm tra xem user có password strategy không
       const hasPassword = user.passwordEnabled;
       if (!hasPassword) {
-        toast.error("Tài khoản của bạn không có mật khẩu. Vui lòng đặt mật khẩu từ trang đăng nhập.");
+        toast.error("Tài khoản của bạn không có mật khẩu. Vui lòng đặt mật khẩu từ trang đăng nhập.", { duration: 3000 });
         return;
       }
 
@@ -172,7 +188,7 @@ export const AccountSettingsContent = ({ }: AccountSettingsContentProps) => {
         signOutOfOtherSessions: false, // Không đăng xuất khỏi các thiết bị khác
       });
 
-      toast.success("Đã đổi mật khẩu thành công");
+      toast.success("Đã đổi mật khẩu thành công", { duration: 3000 });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -186,24 +202,24 @@ export const AccountSettingsContent = ({ }: AccountSettingsContentProps) => {
 
       switch (errorCode) {
         case "form_password_incorrect":
-          toast.error("Mật khẩu hiện tại không đúng");
+          toast.error("Mật khẩu hiện tại không đúng", { duration: 3000 });
           break;
         case "form_password_pwned":
-          toast.error("Mật khẩu này đã bị rò rỉ. Vui lòng sử dụng mật khẩu khác");
+          toast.error("Mật khẩu này đã bị rò rỉ. Vui lòng sử dụng mật khẩu khác", { duration: 3000 });
           break;
         case "form_password_length_too_short":
-          toast.error("Mật khẩu phải có ít nhất 8 ký tự");
+          toast.error("Mật khẩu phải có ít nhất 8 ký tự", { duration: 3000 });
           break;
         case "form_password_same_as_current":
-          toast.error("Mật khẩu mới phải khác mật khẩu hiện tại");
+          toast.error("Mật khẩu mới phải khác mật khẩu hiện tại", { duration: 3000 });
           break;
         case "session_missing":
         case "session_invalid":
-          toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại");
+          toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại", { duration: 3000 });
           router.push("/sign-in");
           break;
         default:
-          toast.error(errorMessage || "Không thể đổi mật khẩu. Vui lòng thử lại sau");
+          toast.error(errorMessage || "Không thể đổi mật khẩu. Vui lòng thử lại sau", { duration: 3000 });
       }
     } finally {
       setIsChangingPassword(false);
@@ -219,7 +235,7 @@ export const AccountSettingsContent = ({ }: AccountSettingsContentProps) => {
       // Clerk sẽ tự động xử lý reverification nếu cần
       await user.delete();
 
-      toast.success("Tài khoản đã được xóa thành công");
+      toast.success("Tài khoản đã được xóa thành công", { duration: 3000 });
       // Redirect về trang chủ sau khi xóa
       window.location.href = "/";
     } catch (error: any) {
@@ -231,13 +247,13 @@ export const AccountSettingsContent = ({ }: AccountSettingsContentProps) => {
       // Xử lý lỗi reverification
       if (errorCode === "session_reverification_required") {
         // Clerk yêu cầu reverification - yêu cầu người dùng đăng nhập lại
-        toast.error("Vui lòng đăng nhập lại để xác thực trước khi xóa tài khoản");
+        toast.error("Vui lòng đăng nhập lại để xác thực trước khi xóa tài khoản", { duration: 3000 });
         setTimeout(() => {
           clerk.signOut();
           router.push("/sign-in");
         }, 2000);
       } else {
-        toast.error(errorMessage || "Không thể xóa tài khoản. Vui lòng thử lại sau");
+        toast.error(errorMessage || "Không thể xóa tài khoản. Vui lòng thử lại sau", { duration: 3000 });
       }
     } finally {
       setIsDeletingAccount(false);

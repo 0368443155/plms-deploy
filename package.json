@@ -48,6 +48,7 @@
     "react-katex": "^3.1.0",
     "react-syntax-highlighter": "^16.1.0",
     "react-textarea-autosize": "^8.5.3",
+    "selenium-webdriver": "^4.39.0",
     "sonner": "^1.0.3",
     "tailwind-merge": "^1.14.0",
     "tailwindcss-animate": "^1.0.7",

@@ -496,3 +496,46 @@ export const remove = mutation({
   },
 });
 
+/**
+ * Update column config (e.g., add new select options)
+ */
+export const updateColumnConfig = mutation({
+  args: {
+    columnId: v.id("tableColumns"),
+    config: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const userId = identity.subject;
+
+    // Verify ownership through column -> table
+    const column = await ctx.db.get(args.columnId);
+    if (!column) {
+      throw new Error("Column not found");
+    }
+
+    const table = await ctx.db.get(column.tableId);
+    if (!table) {
+      throw new Error("Table not found");
+    }
+
+    if (table.userId !== userId) {
+      throw new Error("Unauthorized");
+    }
+
+    // Update column config
+    await ctx.db.patch(args.columnId, {
+      config: args.config,
+    });
+
+    // Update table timestamp
+    await ctx.db.patch(column.tableId, {
+      updatedAt: Date.now(),
+    });
+  },
+});
+

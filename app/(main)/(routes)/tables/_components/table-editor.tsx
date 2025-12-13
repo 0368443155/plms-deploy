@@ -51,6 +51,7 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
   const addColumn = useMutation(api.tables.addColumn);
   const updateTable = useMutation(api.tables.update);
   const deleteTable = useMutation(api.tables.remove);
+  const updateColumnConfig = useMutation(api.tables.updateColumnConfig);
   const router = useRouter();
 
   const [editingCell, setEditingCell] = useState<{
@@ -61,6 +62,9 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
   const [isAddColumnModalOpen, setIsAddColumnModalOpen] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
   const [newColumnType, setNewColumnType] = useState("text");
+  const [selectOptions, setSelectOptions] = useState<string[]>([]);
+  const [newOption, setNewOption] = useState("");
+
 
   // Debounced cell update
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -77,11 +81,11 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
       value: string
     ) => {
       pendingUpdateRef.current = { rowId, columnId, value };
-      
+
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current);
       }
-      
+
       updateTimeoutRef.current = setTimeout(async () => {
         if (pendingUpdateRef.current) {
           try {
@@ -118,11 +122,30 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
     setEditingValue(currentValue || "");
   };
 
-  const handleCellBlur = (
+  const handleCellBlur = async (
     rowId: Id<"tableRows">,
     columnId: Id<"tableColumns">,
     value: string
   ) => {
+    // Find the column to check its type
+    const column = columns.find((col) => col._id === columnId);
+
+    // If it's a select column and value is not empty and not in existing options, add it
+    if (column?.type === "select" && value.trim()) {
+      try {
+        const existingOptions = column.config ? JSON.parse(column.config) : [];
+        if (!existingOptions.includes(value.trim())) {
+          const newOptions = [...existingOptions, value.trim()];
+          await updateColumnConfig({
+            columnId,
+            config: JSON.stringify(newOptions),
+          });
+        }
+      } catch (error) {
+        console.error("Failed to update select options:", error);
+      }
+    }
+
     debouncedUpdateCell(rowId, columnId, value);
     setEditingCell(null);
     setEditingValue("");
@@ -170,15 +193,22 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
     }
 
     try {
+      const config = newColumnType === "select" && selectOptions.length > 0
+        ? JSON.stringify(selectOptions)
+        : undefined;
+
       await addColumn({
         tableId,
         name: newColumnName,
         type: newColumnType,
+        config,
       });
       toast.success("Đã thêm cột mới");
       setIsAddColumnModalOpen(false);
       setNewColumnName("");
       setNewColumnType("text");
+      setSelectOptions([]);
+      setNewOption("");
     } catch (error: any) {
       toast.error(error.message || "Không thể thêm cột");
     }
@@ -297,39 +327,152 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
                         }
                       >
                         {isEditing ? (
-                          <Input
-                            type={
-                              column.type === "number"
-                                ? "number"
-                                : column.type === "date"
-                                ? "date"
-                                : "text"
-                            }
-                            value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={() =>
-                              handleCellBlur(row._id, column._id, editingValue)
-                            }
-                            onKeyDown={(e) =>
-                              handleCellKeyDown(
-                                e,
-                                row._id,
-                                column._id,
-                                editingValue
-                              )
-                            }
-                            autoFocus
-                            className="h-8"
-                          />
-                        ) : (
-                          <div className="min-h-[32px] flex items-center">
-                            {column.type === "checkbox" ? (
+                          column.type === "checkbox" ? (
+                            // Checkbox editing mode: show checkbox + text input
+                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="checkbox"
-                                checked={cellValue === "true"}
-                                readOnly
-                                className="cursor-pointer"
+                                checked={editingValue === "true" || editingValue.startsWith("true")}
+                                onChange={(e) => {
+                                  // Extract current label text
+                                  const currentLabel = editingValue.includes("|")
+                                    ? editingValue.substring(editingValue.indexOf("|") + 1)
+                                    : "";
+                                  const newValue = e.target.checked
+                                    ? `true|${currentLabel}`
+                                    : `false|${currentLabel}`;
+                                  setEditingValue(newValue);
+                                  debouncedUpdateCell(row._id, column._id, newValue);
+                                }}
+                                className="cursor-pointer h-4 w-4 flex-shrink-0"
                               />
+                              <Input
+                                type="text"
+                                value={editingValue.startsWith("true") || editingValue.startsWith("false")
+                                  ? editingValue.substring(editingValue.indexOf("|") + 1) || ""
+                                  : editingValue}
+                                onChange={(e) => {
+                                  const checked = editingValue === "true" || editingValue.startsWith("true");
+                                  const newValue = `${checked}|${e.target.value}`;
+                                  setEditingValue(newValue);
+                                }}
+                                onBlur={() => {
+                                  handleCellBlur(row._id, column._id, editingValue);
+                                }}
+                                onKeyDown={(e) =>
+                                  handleCellKeyDown(
+                                    e,
+                                    row._id,
+                                    column._id,
+                                    editingValue
+                                  )
+                                }
+                                placeholder="Nhập tên checkbox..."
+                                className="h-8 flex-1"
+                              />
+                            </div>
+                          ) : column.type === "select" ? (
+                            // Select editing mode: show dropdown with options
+                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                              <select
+                                value={editingValue}
+                                onChange={(e) => {
+                                  setEditingValue(e.target.value);
+                                  debouncedUpdateCell(row._id, column._id, e.target.value);
+                                }}
+                                onBlur={() => {
+                                  handleCellBlur(row._id, column._id, editingValue);
+                                }}
+                                className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                              >
+                                <option value="">-- Chọn --</option>
+                                {(() => {
+                                  try {
+                                    const options = column.config ? JSON.parse(column.config) : [];
+                                    return options.map((opt: string, idx: number) => (
+                                      <option key={idx} value={opt}>
+                                        {opt}
+                                      </option>
+                                    ));
+                                  } catch {
+                                    return null;
+                                  }
+                                })()}
+                              </select>
+                              <Input
+                                type="text"
+                                placeholder="Hoặc nhập mới..."
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                onBlur={() => {
+                                  handleCellBlur(row._id, column._id, editingValue);
+                                }}
+                                onKeyDown={(e) =>
+                                  handleCellKeyDown(
+                                    e,
+                                    row._id,
+                                    column._id,
+                                    editingValue
+                                  )
+                                }
+                                className="h-8 flex-1"
+                              />
+                            </div>
+                          ) : (
+                            // Other column types: regular input
+                            <Input
+                              type={
+                                column.type === "number"
+                                  ? "number"
+                                  : column.type === "date"
+                                    ? "date"
+                                    : "text"
+                              }
+                              value={editingValue}
+                              onChange={(e) => setEditingValue(e.target.value)}
+                              onBlur={() =>
+                                handleCellBlur(row._id, column._id, editingValue)
+                              }
+                              onKeyDown={(e) =>
+                                handleCellKeyDown(
+                                  e,
+                                  row._id,
+                                  column._id,
+                                  editingValue
+                                )
+                              }
+                              autoFocus
+                              className="h-8"
+                            />
+                          )
+                        ) : (
+                          <div className="min-h-[32px] flex items-center gap-2">
+                            {column.type === "checkbox" ? (
+                              <>
+                                <input
+                                  type="checkbox"
+                                  checked={cellValue === "true" || cellValue.startsWith("true")}
+                                  readOnly
+                                  className="cursor-pointer h-4 w-4"
+                                />
+                                <span className="text-sm">
+                                  {cellValue.includes("|")
+                                    ? cellValue.substring(cellValue.indexOf("|") + 1)
+                                    : cellValue === "true" || cellValue === "false"
+                                      ? ""
+                                      : cellValue}
+                                </span>
+                              </>
+                            ) : column.type === "select" ? (
+                              cellValue ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                  {cellValue}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground italic text-sm">
+                                  Click để chọn
+                                </span>
+                              )
                             ) : (
                               <span className="text-sm">
                                 {cellValue || (
@@ -386,7 +529,13 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
               <select
                 id="columnType"
                 value={newColumnType}
-                onChange={(e) => setNewColumnType(e.target.value)}
+                onChange={(e) => {
+                  setNewColumnType(e.target.value);
+                  if (e.target.value !== "select") {
+                    setSelectOptions([]);
+                    setNewOption("");
+                  }
+                }}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 {COLUMN_TYPES.map((type) => (
@@ -396,6 +545,67 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
                 ))}
               </select>
             </div>
+
+            {/* Select Options Configuration */}
+            {newColumnType === "select" && (
+              <div className="space-y-2">
+                <Label>Tùy chọn</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={newOption}
+                    onChange={(e) => setNewOption(e.target.value)}
+                    placeholder="Nhập tùy chọn..."
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newOption.trim()) {
+                        e.preventDefault();
+                        if (!selectOptions.includes(newOption.trim())) {
+                          setSelectOptions([...selectOptions, newOption.trim()]);
+                          setNewOption("");
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (newOption.trim() && !selectOptions.includes(newOption.trim())) {
+                        setSelectOptions([...selectOptions, newOption.trim()]);
+                        setNewOption("");
+                      }
+                    }}
+                  >
+                    Thêm
+                  </Button>
+                </div>
+                {selectOptions.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {selectOptions.map((option, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                      >
+                        {option}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectOptions(selectOptions.filter((_, i) => i !== index));
+                          }}
+                          className="hover:text-blue-600 dark:hover:text-blue-300"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {selectOptions.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Thêm ít nhất một tùy chọn cho cột lựa chọn
+                  </p>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button
