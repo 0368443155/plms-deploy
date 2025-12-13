@@ -12,7 +12,6 @@ import { toast } from "sonner";
 import { Spinner } from "@/components/spinner";
 import { User, Shield, Mail, Eye, EyeOff, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { SingleImageDropzone } from "@/components/single-image-dropzone";
 import { validateName } from "@/lib/utils";
 import {
   AlertDialog,
@@ -65,13 +64,13 @@ export const AccountSettingsContent = ({ }: AccountSettingsContentProps) => {
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      toast.error("Chỉ chấp nhận file ảnh");
+      toast.error("Chỉ chấp nhận file ảnh", { duration: 3000 });
       return;
     }
 
     // Validate file size (5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("Kích thước ảnh không được vượt quá 5MB");
+      toast.error("Kích thước ảnh không được vượt quá 5MB", { duration: 3000 });
       return;
     }
 
@@ -80,12 +79,12 @@ export const AccountSettingsContent = ({ }: AccountSettingsContentProps) => {
       // Upload avatar trực tiếp lên Clerk sử dụng Clerk API
       await user.setProfileImage({ file });
 
-      toast.success("Đã cập nhật ảnh đại diện");
+      toast.success("Đã cập nhật ảnh đại diện", { duration: 3000 });
       setAvatarFile(undefined);
       router.refresh();
     } catch (error: any) {
       console.error("Avatar upload error:", error);
-      toast.error(error?.errors?.[0]?.message || "Không thể cập nhật ảnh đại diện");
+      toast.error(error?.errors?.[0]?.message || "Không thể cập nhật ảnh đại diện", { duration: 3000 });
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -97,14 +96,18 @@ export const AccountSettingsContent = ({ }: AccountSettingsContentProps) => {
     // Validate first name
     const firstNameValidation = validateName(firstName);
     if (!firstNameValidation.valid) {
-      toast.error(firstNameValidation.error, { duration: 3000 });
+      // Replace "Tên" with "Họ tên" for generic message
+      const errorMessage = firstNameValidation.error?.replace("Tên", "Họ tên") || "Họ tên không hợp lệ";
+      toast.error(errorMessage, { duration: 3000 });
       return;
     }
 
     // Validate last name
     const lastNameValidation = validateName(lastName);
     if (!lastNameValidation.valid) {
-      toast.error(lastNameValidation.error, { duration: 3000 });
+      // Replace "Tên" with "Họ tên" for generic message
+      const errorMessage = lastNameValidation.error?.replace("Tên", "Họ tên") || "Họ tên không hợp lệ";
+      toast.error(errorMessage, { duration: 3000 });
       return;
     }
 
@@ -292,21 +295,79 @@ export const AccountSettingsContent = ({ }: AccountSettingsContentProps) => {
             </div>
 
             {/* Avatar Upload */}
-            <div className="space-y-2 mb-4">
-              <Label>Ảnh đại diện</Label>
-              <SingleImageDropzone
-                width={200}
-                height={200}
-                value={avatarFile || user?.imageUrl}
-                onChange={handleAvatarUpload}
-                disabled={isUploadingAvatar}
-                dropzoneOptions={{
-                  maxSize: 5 * 1024 * 1024, // 5MB
-                }}
-              />
-              {isUploadingAvatar && (
-                <p className="text-sm text-muted-foreground">Đang tải lên...</p>
-              )}
+            <div className="space-y-4 mb-6">
+              <Label className="text-base font-medium">Ảnh đại diện</Label>
+              <div className="flex items-start gap-6">
+                {/* Avatar Preview */}
+                <div className="relative">
+                  <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-border bg-muted">
+                    {user?.imageUrl ? (
+                      <img
+                        src={user.imageUrl}
+                        alt="Avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-primary text-primary-foreground text-4xl font-semibold">
+                        {user?.firstName?.[0]}{user?.lastName?.[0]}
+                      </div>
+                    )}
+                  </div>
+                  {isUploadingAvatar && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                      <Spinner size="default" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Upload Controls */}
+                <div className="flex-1 space-y-3">
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      Tải lên ảnh đại diện của bạn. Kích thước tối đa: 5MB
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Định dạng: JPG, PNG, GIF
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="file"
+                      id="avatar-upload"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleAvatarUpload(file);
+                        }
+                        // Reset input
+                        e.target.value = '';
+                      }}
+                      className="hidden"
+                      disabled={isUploadingAvatar}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById('avatar-upload')?.click()}
+                      disabled={isUploadingAvatar}
+                    >
+                      {isUploadingAvatar ? (
+                        <>
+                          <span className="mr-2">
+                            <Spinner size="sm" />
+                          </span>
+                          Đang tải...
+                        </>
+                      ) : (
+                        'Cập nhật ảnh đại diện'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

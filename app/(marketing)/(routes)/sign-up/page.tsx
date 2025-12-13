@@ -42,14 +42,16 @@ export default function SignUpPage() {
     // Validate first name
     const firstNameValidation = validateName(firstName);
     if (!firstNameValidation.valid) {
-      toast.error(firstNameValidation.error, { duration: 3000 });
+      const errorMessage = firstNameValidation.error?.replace("Tên", "Họ tên") || "Họ tên không hợp lệ";
+      toast.error(errorMessage, { duration: 3000 });
       return;
     }
 
     // Validate last name
     const lastNameValidation = validateName(lastName);
     if (!lastNameValidation.valid) {
-      toast.error(lastNameValidation.error, { duration: 3000 });
+      const errorMessage = lastNameValidation.error?.replace("Tên", "Họ tên") || "Họ tên không hợp lệ";
+      toast.error(errorMessage, { duration: 3000 });
       return;
     }
 
