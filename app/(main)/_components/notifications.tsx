@@ -16,6 +16,9 @@ import { vi } from "date-fns/locale";
 import { useRouter } from "next/navigation";
 import { Id } from "@/convex/_generated/dataModel";
 import { toast } from "sonner";
+import { NotificationModal } from "@/components/modals/notification-modal";
+import { Doc } from "@/convex/_generated/dataModel";
+import { useState } from "react";
 
 export const Notifications = () => {
   const router = useRouter();
@@ -27,14 +30,20 @@ export const Notifications = () => {
   const markAsRead = useMutation(api.notifications.markAsRead);
   const markAllAsRead = useMutation(api.notifications.markAllAsRead);
 
-  const handleNotificationClick = async (notificationId: Id<"notifications">, actionUrl?: string) => {
-    try {
-      await markAsRead({ id: notificationId });
-      if (actionUrl) {
-        router.push(actionUrl);
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Có lỗi xảy ra");
+
+  const [selectedNotification, setSelectedNotification] = useState<Doc<"notifications"> | null>(null);
+
+  const handleNotificationClick = (notification: Doc<"notifications">) => {
+    setSelectedNotification(notification);
+    // We don't mark as read immediately, let user do it in modal or we do it when opening?
+    // User request: just popup the window.
+    // But typically opening it implies reading. 
+    // I'll stick to just opening for now as the modal allows marking as read.
+    // Actually, standard UX: clicking bell item -> mark read & action. 
+    // But since we are showing details in popup, maybe mark as read when popup opens?
+    // Let's mark as read when clicking, then open modal.
+    if (!notification.isRead) {
+      markAsRead({ id: notification._id });
     }
   };
 
@@ -66,7 +75,7 @@ export const Notifications = () => {
     if (priority === "high") return "text-red-600 dark:text-red-400";
     if (priority === "medium") return "text-yellow-600 dark:text-yellow-400";
     if (priority === "low") return "text-blue-600 dark:text-blue-400";
-    
+
     switch (type) {
       case "deadline":
         return "text-red-600 dark:text-red-400";
@@ -131,12 +140,7 @@ export const Notifications = () => {
                     "p-4 cursor-pointer hover:bg-muted/50 transition-colors",
                     !notification.isRead && "bg-muted/30"
                   )}
-                  onClick={() =>
-                    handleNotificationClick(
-                      notification._id,
-                      notification.actionUrl || undefined
-                    )
-                  }
+                  onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="flex items-start gap-3">
                     <div className="text-2xl flex-shrink-0">
@@ -189,6 +193,12 @@ export const Notifications = () => {
           </div>
         )}
       </PopoverContent>
+
+      <NotificationModal
+        isOpen={!!selectedNotification}
+        onClose={() => setSelectedNotification(null)}
+        notification={selectedNotification}
+      />
     </Popover>
   );
 };
