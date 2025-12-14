@@ -248,7 +248,7 @@ export const getById = query({
     const schedule = await ctx.db.get(args.id);
 
     if (!schedule) {
-      throw new Error("Schedule not found");
+      return null;
     }
 
     if (schedule.userId !== userId) {

@@ -16,6 +16,7 @@ export const create = mutation({
     relatedTableId: v.optional(v.id("tables")),
     color: v.optional(v.string()),
     reminder: v.optional(v.number()), // Minutes before event to remind
+    reminderType: v.optional(v.string()), // "none", "default", "custom"
     location: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -49,6 +50,7 @@ export const create = mutation({
       relatedTableId: args.relatedTableId,
       color: args.color || getDefaultColorForType(args.type),
       reminder: args.reminder,
+      reminderType: args.reminderType || "none",
       location: args.location,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -183,6 +185,7 @@ export const update = mutation({
     relatedTableId: v.optional(v.id("tables")),
     color: v.optional(v.string()),
     reminder: v.optional(v.number()),
+    reminderType: v.optional(v.string()),
     location: v.optional(v.string()),
   },
   handler: async (ctx, args) => {

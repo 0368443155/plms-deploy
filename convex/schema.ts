@@ -164,6 +164,7 @@ export default defineSchema({
     })
         .index("by_user", ["userId"])
         .index("by_user_day", ["userId", "dayOfWeek"])
+        .index("by_day", ["dayOfWeek"])
         .index("by_subject", ["subjectId"]),
 
     // ========================================
@@ -184,13 +185,15 @@ export default defineSchema({
         relatedDocumentId: v.optional(v.id("documents")),
         relatedTableId: v.optional(v.id("tables")),
         color: v.optional(v.string()),
-        reminder: v.optional(v.number()), // Minutes before event to remind
+        reminder: v.optional(v.number()), // Minutes before event to remind (for custom)
+        reminderType: v.optional(v.string()), // "none", "default", "custom"
         location: v.optional(v.string()),
         createdAt: v.number(),
         updatedAt: v.number(),
     })
         .index("by_user", ["userId"])
         .index("by_user_date", ["userId", "startDate"])
+        .index("by_start_date", ["startDate"])
         .index("by_type", ["type"])
         .index("by_document", ["relatedDocumentId"]),
 
@@ -208,6 +211,7 @@ export default defineSchema({
         message: v.string(),
         isRead: v.boolean(),
         relatedEventId: v.optional(v.id("events")),
+        relatedScheduleId: v.optional(v.id("schedules")),
         relatedDocumentId: v.optional(v.id("documents")),
         relatedTableId: v.optional(v.id("tables")),
         actionUrl: v.optional(v.string()), // Link to related page

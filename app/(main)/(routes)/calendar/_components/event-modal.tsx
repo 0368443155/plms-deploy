@@ -55,6 +55,9 @@ export const EventModal = ({
   const [allDay, setAllDay] = useState(false);
   const [type, setType] = useState("custom");
   const [location, setLocation] = useState("");
+  const [reminderType, setReminderType] = useState("none"); // "none" | "default" | "custom"
+  const [reminderValue, setReminderValue] = useState(30);
+  const [reminderUnit, setReminderUnit] = useState("minutes"); // "minutes" | "hours" | "days"
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Initialize form
@@ -88,6 +91,26 @@ export const EventModal = ({
       setAllDay(event.allDay || false);
       setType(event.type || "custom");
       setLocation(event.location || "");
+
+      // Load reminder settings
+      if (event.reminderType) {
+        setReminderType(event.reminderType);
+        if (event.reminderType === "custom" && event.reminder) {
+          if (event.reminder % 1440 === 0) {
+            setReminderValue(event.reminder / 1440);
+            setReminderUnit("days");
+          } else if (event.reminder % 60 === 0) {
+            setReminderValue(event.reminder / 60);
+            setReminderUnit("hours");
+          } else {
+            setReminderValue(event.reminder);
+            setReminderUnit("minutes");
+          }
+        }
+      } else {
+        // Backward compatibility or default
+        setReminderType("none");
+      }
     } else if (defaultValues) {
       // Creating new event from calendar slot
       const start = defaultValues.start;
@@ -140,6 +163,14 @@ export const EventModal = ({
     const start = new Date(`${startDate}T${allDay ? "00:00" : startTime}`);
     const end = new Date(`${endDate}T${allDay ? "23:59" : endTime}`);
 
+    // Calculate reminder in minutes if custom
+    let reminderMinutes: number | undefined = undefined;
+    if (reminderType === "custom") {
+      if (reminderUnit === "days") reminderMinutes = reminderValue * 1440;
+      else if (reminderUnit === "hours") reminderMinutes = reminderValue * 60;
+      else reminderMinutes = reminderValue;
+    }
+
     if (start >= end) {
       toast.error("Thời gian kết thúc phải sau thời gian bắt đầu");
       return;
@@ -157,6 +188,8 @@ export const EventModal = ({
           allDay,
           type,
           location: location || undefined,
+          reminder: reminderMinutes,
+          reminderType,
         });
         toast.success("Đã cập nhật sự kiện");
       } else {
@@ -170,6 +203,8 @@ export const EventModal = ({
           type,
           location: location || undefined,
           color: EVENT_TYPES.find((t) => t.value === type)?.color,
+          reminder: reminderMinutes,
+          reminderType,
         });
         toast.success("Đã tạo sự kiện");
       }
@@ -310,6 +345,44 @@ export const EventModal = ({
               <Label htmlFor="allDay" className="cursor-pointer">
                 Cả ngày
               </Label>
+            </div>
+
+            {/* Notification Logic */}
+            <div className="space-y-2">
+              <Label>Thông báo</Label>
+              <div className="flex gap-2">
+                <select
+                  value={reminderType}
+                  onChange={(e) => setReminderType(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="none">Không thông báo</option>
+                  <option value="default">Mặc định hệ thống (20:00 hôm trước)</option>
+                  <option value="custom">Tùy chỉnh...</option>
+                </select>
+              </div>
+
+              {reminderType === "custom" && (
+                <div className="flex gap-2 items-center mt-2">
+                  <Input
+                    type="number"
+                    min="1"
+                    value={reminderValue}
+                    onChange={(e) => setReminderValue(parseInt(e.target.value) || 0)}
+                    className="w-20"
+                  />
+                  <select
+                    value={reminderUnit}
+                    onChange={(e) => setReminderUnit(e.target.value)}
+                    className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="minutes">Phút</option>
+                    <option value="hours">Giờ</option>
+                    <option value="days">Ngày</option>
+                  </select>
+                  <span className="text-sm">trước khi bắt đầu</span>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">

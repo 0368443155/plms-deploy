@@ -10,6 +10,7 @@
 
 import type * as ai from "../ai.js";
 import type * as calendar from "../calendar.js";
+import type * as crons from "../crons.js";
 import type * as documents from "../documents.js";
 import type * as events from "../events.js";
 import type * as notifications from "../notifications.js";
@@ -27,6 +28,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   ai: typeof ai;
   calendar: typeof calendar;
+  crons: typeof crons;
   documents: typeof documents;
   events: typeof events;
   notifications: typeof notifications;

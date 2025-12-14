@@ -34,6 +34,7 @@ import { TemplatePicker } from "@/components/template-picker";
 import { Template } from "@/lib/templates";
 import Link from "next/link";
 import Image from "next/image";
+import { Notifications } from "./notifications";
 import { Home } from "lucide-react";
 
 export const Navigation = () => {
@@ -282,15 +283,20 @@ export const Navigation = () => {
         {!!params.documentId ? (
           <Navbar isCollapsed={isCollapsed} onResetWidth={resetWidth} />
         ) : (
-          <nav className="bg-transparent px-3 py-2 w-full">
+          <nav className="bg-transparent px-3 py-2 w-full flex items-center justify-between">
             {/* If the sidebar is collapsed, show the menu icon to let the user reopen the sidebar */}
-            {isCollapsed && (
+            {isCollapsed ? (
               <MenuIcon
                 onClick={resetWidth}
                 role="button"
                 className="h-6 w-6 text-muted-foreground"
               />
+            ) : (
+              <div /> // Spacer
             )}
+            <div className="flex items-center gap-x-2">
+              <Notifications />
+            </div>
           </nav>
         )}
       </div>
