@@ -8,18 +8,7 @@ import { useEdgeStore } from "@/lib/edgestore";
 import { useEffect, useRef, useCallback } from "react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
-import dynamic from "next/dynamic";
 import { CodeBlockEnhancer } from "./code-block-enhancer";
-
-// Lazy load PDF components to avoid webpack bundling issues with pdfjs-dist
-const PDFBlock = dynamic(() => import("./pdf-block").then(mod => ({ default: mod.PDFBlock })), {
-  ssr: false,
-  loading: () => (
-    <div className="p-4 border rounded-lg bg-muted">
-      <p className="text-sm">Đang tải PDF...</p>
-    </div>
-  ),
-});
 
 // Helper function to check if URL is PDF
 const isPDFUrl = (url: string): boolean => {
@@ -50,7 +39,7 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
       : undefined,
     onEditorContentChange: (editor) => {
       onChange(JSON.stringify(editor.topLevelBlocks, null, 2));
-      
+
       // Render math equations after content change
       setTimeout(() => {
         renderMathEquations();
@@ -70,25 +59,25 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
 
     codeBlocks.forEach((codeBlock) => {
       const text = codeBlock.textContent || "";
-      
+
       // Check if it's a math equation (starts with $ or contains LaTeX)
       if (text.match(/^\$.*\$$/) || text.match(/\\[a-zA-Z]+/)) {
         // Extract math content (remove $ delimiters if present)
         const mathContent = text.replace(/^\$\$?|\$\$?$/g, "").trim();
-        
+
         if (mathContent) {
           try {
             // Create a new element for KaTeX rendering
             const mathElement = document.createElement("span");
             mathElement.className = "katex-math-block";
-            
+
             // Render with KaTeX
             katex.render(mathContent, mathElement, {
               displayMode: text.startsWith("$$"),
               throwOnError: false,
               errorColor: "#cc0000",
             });
-            
+
             // Replace code block with math element
             codeBlock.parentElement?.replaceChild(mathElement, codeBlock);
           } catch (error) {
@@ -128,17 +117,17 @@ const Editor = ({ onChange, initialContent, editable }: EditorProps) => {
 
     // Find all image elements
     const images = editorRef.current.querySelectorAll("img");
-    
+
     images.forEach((img) => {
       const src = img.getAttribute("src");
       if (src && isPDFUrl(src)) {
         // Create a container for PDF viewer
         const container = document.createElement("div");
         container.className = "pdf-viewer-container";
-        
+
         // Replace image with PDF viewer (using React portal would be better, but this works)
         img.parentElement?.replaceChild(container, img);
-        
+
         // Note: In a real implementation, we'd use React Portal to render PDFViewer
         // For now, we'll just show a link to the PDF
         container.innerHTML = `

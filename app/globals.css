@@ -118,3 +118,160 @@ input[type="password"]::-webkit-contacts-auto-fill-button {
   overflow-y: auto;
   padding: 2rem;
 }
+
+/* Document Block Preview Styles */
+.document-block-container {
+  @apply w-full overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700;
+  @apply bg-white dark:bg-slate-900 shadow-sm;
+  @apply transition-shadow duration-200;
+}
+
+.document-block-container:hover {
+  @apply shadow-md;
+}
+
+/* Document preview header */
+.document-preview-header {
+  @apply flex items-center justify-between px-4 py-3;
+  @apply bg-gradient-to-r from-slate-100 to-slate-50;
+  @apply dark:from-slate-800 dark:to-slate-900;
+  @apply border-b border-slate-200 dark:border-slate-700;
+}
+
+/* Document preview content area */
+.document-preview-content {
+  @apply relative bg-slate-100 dark:bg-slate-800;
+  @apply transition-all duration-300 ease-in-out;
+}
+
+/* Responsive document preview heights */
+.document-preview-collapsed {
+  height: 200px;
+}
+
+.document-preview-expanded {
+  height: 500px;
+}
+
+@media (max-width: 768px) {
+  .document-preview-collapsed {
+    height: 150px;
+  }
+  
+  .document-preview-expanded {
+    height: 400px;
+  }
+}
+
+@media (max-width: 480px) {
+  .document-preview-collapsed {
+    height: 120px;
+  }
+  
+  .document-preview-expanded {
+    height: 300px;
+  }
+}
+
+/* PDF canvas styling */
+.pdf-canvas-container {
+  @apply flex justify-center items-start overflow-auto p-4;
+  @apply bg-slate-100 dark:bg-slate-800;
+}
+
+.pdf-canvas-container canvas {
+  @apply shadow-lg bg-white;
+}
+
+/* Document type badges */
+.document-type-badge {
+  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+}
+
+.document-type-badge.pdf {
+  @apply bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300;
+}
+
+.document-type-badge.word {
+  @apply bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300;
+}
+
+.document-type-badge.excel {
+  @apply bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300;
+}
+
+.document-type-badge.powerpoint {
+  @apply bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300;
+}
+
+.document-type-badge.image {
+  @apply bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300;
+}
+
+/* File upload dropzone styles */
+.file-dropzone {
+  @apply border-2 border-dashed border-slate-300 dark:border-slate-600;
+  @apply rounded-xl bg-slate-50 dark:bg-slate-900;
+  @apply transition-all duration-200;
+}
+
+.file-dropzone.active {
+  @apply border-blue-400 bg-blue-50 dark:bg-blue-900/20;
+}
+
+.file-dropzone:hover {
+  @apply bg-slate-100 dark:bg-slate-800;
+}
+
+/* Upload progress bar */
+.upload-progress-bar {
+  @apply h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden;
+}
+
+.upload-progress-fill {
+  @apply h-full bg-blue-500 transition-all duration-300;
+}
+
+/* Fullscreen document modal */
+.document-fullscreen-modal {
+  @apply fixed inset-0 z-50 bg-black/90;
+  @apply flex flex-col;
+}
+
+.document-fullscreen-content {
+  @apply flex-1 overflow-hidden;
+}
+
+/* Smooth animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.document-block-container {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Editor toolbar styles */
+.editor-toolbar {
+  @apply flex items-center gap-2 p-2;
+  @apply bg-slate-100 dark:bg-slate-800 rounded-lg;
+  @apply border border-slate-200 dark:border-slate-700;
+}
+
+.editor-toolbar-button {
+  @apply px-3 py-2 rounded-lg transition-all;
+  @apply flex items-center gap-2 text-sm font-medium;
+  @apply text-slate-600 dark:text-slate-400;
+  @apply hover:bg-slate-200 dark:hover:bg-slate-700;
+}
+
+.editor-toolbar-button.active {
+  @apply bg-blue-100 dark:bg-blue-900/40 text-blue-600;
+}
