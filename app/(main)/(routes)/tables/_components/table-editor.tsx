@@ -64,6 +64,7 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
   const [newColumnType, setNewColumnType] = useState("text");
   const [selectOptions, setSelectOptions] = useState<string[]>([]);
   const [newOption, setNewOption] = useState("");
+  const [selectInputValue, setSelectInputValue] = useState(""); // Separate state for select input field
 
 
   // Debounced cell update
@@ -120,6 +121,7 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
   ) => {
     setEditingCell({ rowId, columnId });
     setEditingValue(currentValue || "");
+    setSelectInputValue(""); // Reset select input value when clicking a new cell
   };
 
   const handleCellBlur = async (
@@ -149,6 +151,7 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
     debouncedUpdateCell(rowId, columnId, value);
     setEditingCell(null);
     setEditingValue("");
+    setSelectInputValue(""); // Reset select input value
   };
 
   const handleCellKeyDown = (
@@ -162,9 +165,11 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
       debouncedUpdateCell(rowId, columnId, value);
       setEditingCell(null);
       setEditingValue("");
+      setSelectInputValue(""); // Reset select input value
     } else if (e.key === "Escape") {
       setEditingCell(null);
       setEditingValue("");
+      setSelectInputValue(""); // Reset select input value
     }
   };
 
@@ -372,16 +377,21 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
                               />
                             </div>
                           ) : column.type === "select" ? (
-                            // Select editing mode: show dropdown with options
+                            // Select editing mode: show dropdown with options + input for new value
                             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                               <select
-                                value={editingValue}
+                                value={selectInputValue ? "" : editingValue}
                                 onChange={(e) => {
-                                  setEditingValue(e.target.value);
-                                  debouncedUpdateCell(row._id, column._id, e.target.value);
+                                  const selectedValue = e.target.value;
+                                  setEditingValue(selectedValue);
+                                  setSelectInputValue(""); // Clear input when selecting from dropdown
+                                  debouncedUpdateCell(row._id, column._id, selectedValue);
                                 }}
                                 onBlur={() => {
-                                  handleCellBlur(row._id, column._id, editingValue);
+                                  // Only blur if input is empty (user didn't type anything new)
+                                  if (!selectInputValue) {
+                                    handleCellBlur(row._id, column._id, editingValue);
+                                  }
                                 }}
                                 className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                               >
@@ -402,19 +412,35 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
                               <Input
                                 type="text"
                                 placeholder="Hoặc nhập mới..."
-                                value={editingValue}
-                                onChange={(e) => setEditingValue(e.target.value)}
-                                onBlur={() => {
-                                  handleCellBlur(row._id, column._id, editingValue);
+                                value={selectInputValue}
+                                onChange={(e) => {
+                                  setSelectInputValue(e.target.value);
                                 }}
-                                onKeyDown={(e) =>
-                                  handleCellKeyDown(
-                                    e,
-                                    row._id,
-                                    column._id,
-                                    editingValue
-                                  )
-                                }
+                                onBlur={() => {
+                                  // Use selectInputValue if user typed something, otherwise use dropdown value
+                                  const finalValue = selectInputValue.trim() || editingValue;
+                                  if (selectInputValue.trim()) {
+                                    setEditingValue(selectInputValue.trim());
+                                  }
+                                  handleCellBlur(row._id, column._id, finalValue);
+                                  setSelectInputValue(""); // Reset after blur
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    const finalValue = selectInputValue.trim() || editingValue;
+                                    if (selectInputValue.trim()) {
+                                      setEditingValue(selectInputValue.trim());
+                                    }
+                                    debouncedUpdateCell(row._id, column._id, finalValue);
+                                    handleCellBlur(row._id, column._id, finalValue);
+                                    setSelectInputValue(""); // Reset after save
+                                  } else if (e.key === "Escape") {
+                                    setEditingCell(null);
+                                    setEditingValue("");
+                                    setSelectInputValue("");
+                                  }
+                                }}
                                 className="h-8 flex-1"
                               />
                             </div>

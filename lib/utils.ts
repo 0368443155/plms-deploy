@@ -96,7 +96,8 @@ export function validateName(name: string): { valid: boolean; error?: string } {
 
   // Check for special characters (allow only letters, spaces, and Vietnamese diacritics)
   // Vietnamese letters: a-z, A-Z, and Vietnamese diacritics
-  const vietnameseNamePattern = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ\s]+$/;
+  // Full Vietnamese Y characters: ý, ỳ, ỷ, ỹ, ỵ (lowercase) and Ý, Ỳ, Ỷ, Ỹ, Ỵ (uppercase)
+  const vietnameseNamePattern = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴỶỸửữựỳýỵỷỹÝ\s]+$/;
 
   if (!vietnameseNamePattern.test(trimmedName)) {
     return { valid: false, error: "Tên chỉ được chứa chữ cái" };
