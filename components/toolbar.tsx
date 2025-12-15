@@ -390,18 +390,20 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
                 {attachedFiles.map((file) => (
                   <div
                     key={file.id}
-                    className="flex items-center justify-between p-2 bg-slate-100 dark:bg-slate-800 rounded-lg"
+                    className="flex items-center gap-2 p-2 bg-slate-100 dark:bg-slate-800 rounded-lg"
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Paperclip className="h-4 w-4 text-slate-500 flex-shrink-0" />
-                      <span className="text-sm truncate">{file.fileName}</span>
-                      <span className="text-xs text-muted-foreground flex-shrink-0">
+                    <Paperclip className="h-4 w-4 text-slate-500 flex-shrink-0" />
+                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                      <span className="text-sm truncate max-w-[200px]" title={file.fileName}>
+                        {file.fileName}
+                      </span>
+                      <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
                         ({formatSize(file.fileSize)})
                       </span>
                     </div>
                     <button
                       onClick={() => handleRemoveFile(file.id)}
-                      className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500"
+                      className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-500 flex-shrink-0"
                     >
                       <X className="h-4 w-4" />
                     </button>
