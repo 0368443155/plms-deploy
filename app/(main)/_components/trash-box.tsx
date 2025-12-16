@@ -99,8 +99,8 @@ export const TrashBox = () => {
           placeholder="Lọc theo tiêu đề trang..."
         />
       </div>
-      {/* Will be rendered only if it is the last element */}
-      <div className="mt-2 px-1 pb-1">
+      {/* Scrollable container for trash list */}
+      <div className="mt-2 px-1 pb-1 max-h-[60vh] overflow-y-auto">
         {filteredDocuments && filteredDocuments.length === 0 && search.trim() !== "" && (
           <p className="text-xs text-center text-muted-foreground pb-2">
             Không tìm thấy tài liệu nào với từ khóa &quot;{search}&quot;.

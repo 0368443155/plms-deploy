@@ -37,18 +37,15 @@ interface ToolbarProps {
   preview?: boolean;
 }
 
-// Interface for attached files (stored separately from BlockNote content)
+// Interface for attached files
 interface AttachedFile {
   id: string;
-  url: string;
   fileName: string;
+  fileUrl: string;
   fileType: string;
   fileSize: number;
   uploadedAt: number;
 }
-
-// Storage key prefix for attached files
-const ATTACHMENTS_STORAGE_KEY = "document_attachments_";
 
 export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
   const inputRef = useRef<ElementRef<"textarea">>(null);
@@ -58,7 +55,9 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>(
+    initialData.attachedFiles || []
+  );
   const [showAttachments, setShowAttachments] = useState(false);
 
   const update = useMutation(api.documents.update);
@@ -67,52 +66,60 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
 
   const coverImage = useCoverImage();
 
-  // Load attached files from localStorage on mount
+  // Sync attachedFiles from initialData when it changes
   useEffect(() => {
-    const storageKey = ATTACHMENTS_STORAGE_KEY + initialData._id;
-    try {
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        setAttachedFiles(JSON.parse(stored));
-      }
-    } catch (error) {
-      console.error("Error loading attachments:", error);
+    if (initialData.attachedFiles) {
+      setAttachedFiles(initialData.attachedFiles);
     }
-  }, [initialData._id]);
+  }, [initialData.attachedFiles]);
 
-  // Save attached files to localStorage when they change
-  const saveAttachments = useCallback((files: AttachedFile[]) => {
-    const storageKey = ATTACHMENTS_STORAGE_KEY + initialData._id;
+  // Save attached files to Convex
+  const saveAttachments = useCallback(async (files: AttachedFile[]) => {
     try {
-      localStorage.setItem(storageKey, JSON.stringify(files));
+      await update({
+        id: initialData._id,
+        attachedFiles: files,
+      });
     } catch (error) {
       console.error("Error saving attachments:", error);
+      toast.error("Không thể lưu tệp đính kèm");
     }
-  }, [initialData._id]);
+  }, [initialData._id, update]);
 
   const enableInput = () => {
     if (preview) return;
     setIsEditing(true);
+    setValue(initialData.title);
     setTimeout(() => {
-      setValue(initialData.title);
       inputRef.current?.focus();
+      inputRef.current?.select();
     }, 0);
   };
 
-  const disableInput = () => setIsEditing(false);
+  const disableInput = () => {
+    const finalTitle = value.trim() || "Không có tiêu đề";
 
-  const onInput = (value: string) => {
-    setValue(value);
-    update({
-      id: initialData._id,
-      title: value || "Không có tiêu đề",
-    });
+    if (finalTitle !== initialData.title) {
+      update({
+        id: initialData._id,
+        title: finalTitle,
+      });
+    }
+
+    setIsEditing(false);
+  };
+
+  const onInput = (newValue: string) => {
+    setValue(newValue);
   };
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter") {
       event.preventDefault();
       disableInput();
+    } else if (event.key === "Escape") {
+      setValue(initialData.title);
+      setIsEditing(false);
     }
   };
 
@@ -152,7 +159,7 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
 
       const newFile: AttachedFile = {
         id: `file-${Date.now()}`,
-        url: response.url,
+        fileUrl: response.url,
         fileName: file.name,
         fileType,
         fileSize: file.size,
@@ -299,7 +306,7 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
           onClick={enableInput}
           className="pb-[11.5px] text-5xl font-bold break-words outline-none text-[#3F3F3F] dark:text-[#CFCFCF]"
         >
-          {initialData.title}
+          {value}
         </div>
       )}
 
@@ -320,7 +327,7 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
               {attachedFiles.map((file) => (
                 <DocumentBlock
                   key={file.id}
-                  url={file.url}
+                  url={file.fileUrl}
                   fileName={file.fileName}
                   fileType={file.fileType}
                   fileSize={file.fileSize}

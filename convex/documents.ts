@@ -408,6 +408,14 @@ export const update = mutation({
     coverImage: v.optional(v.string()),
     icon: v.optional(v.string()),
     isPublished: v.optional(v.boolean()),
+    attachedFiles: v.optional(v.array(v.object({
+      id: v.string(),
+      fileName: v.string(),
+      fileUrl: v.string(),
+      fileType: v.string(),
+      fileSize: v.number(),
+      uploadedAt: v.number(),
+    }))),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();

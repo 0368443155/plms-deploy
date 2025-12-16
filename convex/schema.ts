@@ -28,6 +28,15 @@ export default defineSchema({
         coverImage: v.optional(v.string()),
         icon: v.optional(v.string()),
         isPublished: v.boolean(),
+        // File attachments metadata (URLs are stored in EdgeStore)
+        attachedFiles: v.optional(v.array(v.object({
+            id: v.string(),
+            fileName: v.string(),
+            fileUrl: v.string(),
+            fileType: v.string(),
+            fileSize: v.number(),
+            uploadedAt: v.number(),
+        }))),
     })
         .index("by_user", ["userId"])
         .index("by_user_parent", ["userId", "parentDocument"])

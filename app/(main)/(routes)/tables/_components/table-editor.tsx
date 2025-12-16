@@ -380,17 +380,15 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
                             // Select editing mode: show dropdown with options + input for new value
                             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                               <select
-                                value={selectInputValue ? "" : editingValue}
+                                value={editingValue}
                                 onChange={(e) => {
                                   const selectedValue = e.target.value;
                                   setEditingValue(selectedValue);
                                   setSelectInputValue(""); // Clear input when selecting from dropdown
-                                  debouncedUpdateCell(row._id, column._id, selectedValue);
-                                }}
-                                onBlur={() => {
-                                  // Only blur if input is empty (user didn't type anything new)
-                                  if (!selectInputValue) {
-                                    handleCellBlur(row._id, column._id, editingValue);
+                                  // Save immediately when selecting from dropdown
+                                  if (selectedValue) {
+                                    debouncedUpdateCell(row._id, column._id, selectedValue);
+                                    setEditingCell(null);
                                   }
                                 }}
                                 className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -413,28 +411,56 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
                                 type="text"
                                 placeholder="Hoặc nhập mới..."
                                 value={selectInputValue}
+                                autoFocus
                                 onChange={(e) => {
+                                  // Only update selectInputValue, not editingValue
                                   setSelectInputValue(e.target.value);
                                 }}
                                 onBlur={() => {
-                                  // Use selectInputValue if user typed something, otherwise use dropdown value
-                                  const finalValue = selectInputValue.trim() || editingValue;
+                                  // Only save if user actually typed something
                                   if (selectInputValue.trim()) {
-                                    setEditingValue(selectInputValue.trim());
+                                    const newValue = selectInputValue.trim();
+                                    setEditingValue(newValue);
+                                    handleCellBlur(row._id, column._id, newValue);
+                                  } else if (editingValue) {
+                                    // If user didn't type but has dropdown selection
+                                    handleCellBlur(row._id, column._id, editingValue);
+                                  } else {
+                                    // No input and no selection, just close
+                                    setEditingCell(null);
+                                    setEditingValue("");
                                   }
-                                  handleCellBlur(row._id, column._id, finalValue);
-                                  setSelectInputValue(""); // Reset after blur
+                                  setSelectInputValue(""); // Always reset input
                                 }}
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
                                     e.preventDefault();
+                                    // Save input value if typed, otherwise dropdown value
                                     const finalValue = selectInputValue.trim() || editingValue;
-                                    if (selectInputValue.trim()) {
-                                      setEditingValue(selectInputValue.trim());
+                                    if (finalValue) {
+                                      setEditingValue(finalValue);
+                                      debouncedUpdateCell(row._id, column._id, finalValue);
+
+                                      // Add to options if new
+                                      if (selectInputValue.trim()) {
+                                        try {
+                                          const existingOptions = column.config ? JSON.parse(column.config) : [];
+                                          if (!existingOptions.includes(selectInputValue.trim())) {
+                                            const newOptions = [...existingOptions, selectInputValue.trim()];
+                                            updateColumnConfig({
+                                              columnId: column._id,
+                                              config: JSON.stringify(newOptions),
+                                            });
+                                          }
+                                        } catch (error) {
+                                          console.error("Failed to update select options:", error);
+                                        }
+                                      }
                                     }
-                                    debouncedUpdateCell(row._id, column._id, finalValue);
-                                    handleCellBlur(row._id, column._id, finalValue);
-                                    setSelectInputValue(""); // Reset after save
+                                    // Reset everything
+                                    setEditingCell(null);
+                                    setEditingValue("");
+                                    setSelectInputValue("");
                                   } else if (e.key === "Escape") {
                                     setEditingCell(null);
                                     setEditingValue("");

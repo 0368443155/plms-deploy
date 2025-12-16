@@ -89,7 +89,7 @@ const DocumentIdPage = ({ params }: DocumentIdPageProps) => {
             : "md:max-w-3xl lg:max-w-4xl"
         )}
       >
-        {!isStudyMode && <Toolbar initialData={document} />}
+        {!isStudyMode && <Toolbar key={document._id} initialData={document} />}
         {isStudyMode && (
           <div className="mb-8 pb-4 border-b">
             <div className="flex items-center justify-between">
