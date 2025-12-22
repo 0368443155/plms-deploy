@@ -17,12 +17,51 @@ export const exportToPDF = async (
   filename: string = "document"
 ): Promise<void> => {
   try {
+    // Clone the element to avoid modifying the original
+    const clonedElement = element.cloneNode(true) as HTMLElement;
+
+    // Hide elements that shouldn't be in PDF
+    const elementsToHide = [
+      'button',  // All buttons
+      '[role="button"]',  // Button-like elements
+      '.no-print',  // Elements with no-print class
+      '[data-no-print]',  // Elements with data-no-print attribute
+      '.bn-block-outer[data-node-type="paragraph"]:has(.bn-inline-content:empty)',  // Empty paragraphs with placeholders
+    ];
+
+    elementsToHide.forEach(selector => {
+      const elements = clonedElement.querySelectorAll(selector);
+      elements.forEach(el => {
+        (el as HTMLElement).style.display = 'none';
+      });
+    });
+
+    // Also hide placeholder text specifically
+    const placeholders = clonedElement.querySelectorAll('[data-placeholder], .placeholder');
+    placeholders.forEach(el => {
+      (el as HTMLElement).style.display = 'none';
+    });
+
+    // Append cloned element temporarily to document (needed for html2canvas)
+    clonedElement.style.position = 'absolute';
+    clonedElement.style.left = '-9999px';
+    clonedElement.style.top = '0';
+    clonedElement.style.padding = '20px';  // Add padding to prevent clipping
+    clonedElement.style.overflow = 'visible';  // Ensure content is not clipped
+    document.body.appendChild(clonedElement);
+
     // Convert HTML to canvas
-    const canvas = await html2canvas(element, {
+    const canvas = await html2canvas(clonedElement, {
       scale: 2, // Higher quality
       useCORS: true,
       logging: false,
+      backgroundColor: '#ffffff',  // White background
+      windowHeight: clonedElement.scrollHeight + 100,  // Add extra height to prevent clipping
+      allowTaint: true,  // Allow cross-origin images
     });
+
+    // Remove cloned element
+    document.body.removeChild(clonedElement);
 
     const imgData = canvas.toDataURL("image/png");
     const pdf = new jsPDF("p", "mm", "a4"); // A4 size, portrait
@@ -119,4 +158,3 @@ export const extractPlainText = (html: string): string => {
   tempDiv.innerHTML = html;
   return tempDiv.textContent || tempDiv.innerText || "";
 };
-

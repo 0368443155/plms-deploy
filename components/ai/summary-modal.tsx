@@ -67,7 +67,24 @@ export const SummaryModal = ({
       }
     } catch (error: any) {
       console.error("Summarize error:", error);
-      toast.error(error.message || "Không thể tạo tóm tắt");
+
+      // Parse error message to show user-friendly Vietnamese message
+      let errorMessage = "Không thể tạo tóm tắt";
+
+      if (error.message) {
+        if (error.message.includes("Content too short") || error.message.includes("minimum 100 characters")) {
+          errorMessage = "Nội dung tài liệu quá ngắn để tóm tắt (cần tối thiểu 100 ký tự)";
+        } else if (error.message.includes("quota") || error.message.includes("429")) {
+          errorMessage = "Đã vượt quá giới hạn API. Vui lòng thử lại sau";
+        } else if (error.message.includes("API_KEY_INVALID") || error.message.includes("401")) {
+          errorMessage = "Lỗi xác thực API. Vui lòng liên hệ quản trị viên";
+        } else {
+          // Use the error message if it's already in Vietnamese
+          errorMessage = error.message;
+        }
+      }
+
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -85,8 +102,8 @@ export const SummaryModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl h-[80vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-purple-500" />
             Tóm tắt AI
@@ -96,7 +113,7 @@ export const SummaryModal = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
           {isLoading ? (
             <div className="space-y-3">
               <Skeleton className="h-4 w-full" />
@@ -122,32 +139,6 @@ export const SummaryModal = ({
                   Từ cache • Model: {model}
                 </p>
               )}
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCopy}
-                    className="gap-2"
-                  >
-                    <Copy className="h-4 w-4" />
-                    Copy
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRegenerate}
-                    className="gap-2"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    Tạo lại
-                  </Button>
-                </div>
-                <Button variant="outline" onClick={onClose}>
-                  Đóng
-                </Button>
-              </div>
             </div>
           ) : (
             <div className="text-center py-8">
@@ -165,6 +156,36 @@ export const SummaryModal = ({
             </div>
           )}
         </div>
+
+        {summary && !isLoading && (
+          <div className="px-6 pb-6 pt-4 border-t flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopy}
+                  className="gap-2"
+                >
+                  <Copy className="h-4 w-4" />
+                  Copy
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRegenerate}
+                  className="gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Tạo lại
+                </Button>
+              </div>
+              <Button variant="outline" onClick={onClose}>
+                Đóng
+              </Button>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

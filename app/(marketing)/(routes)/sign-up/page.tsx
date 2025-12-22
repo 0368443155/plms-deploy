@@ -61,6 +61,32 @@ export default function SignUpPage() {
       return;
     }
 
+    // Validate password strength (client-side to show Vietnamese messages)
+    if (password.length < 8) {
+      toast.error("Mật khẩu phải có ít nhất 8 ký tự.", { duration: 3000 });
+      return;
+    }
+
+    if (!/[a-z]/.test(password)) {
+      toast.error("Mật khẩu phải chứa ít nhất một chữ cái thường (a-z).", { duration: 3000 });
+      return;
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      toast.error("Mật khẩu phải chứa ít nhất một chữ cái hoa (A-Z).", { duration: 3000 });
+      return;
+    }
+
+    if (!/[0-9]/.test(password)) {
+      toast.error("Mật khẩu phải chứa ít nhất một chữ số (0-9).", { duration: 3000 });
+      return;
+    }
+
+    if (!/[!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]/.test(password)) {
+      toast.error("Mật khẩu phải chứa ít nhất một ký tự đặc biệt (ví dụ: !@#$%^&*).", { duration: 3000 });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -132,11 +158,38 @@ export default function SignUpPage() {
         case "form_password_length_too_short":
           errorMessage = "Mật khẩu phải có ít nhất 8 ký tự.";
           break;
+        case "form_password_no_lowercase":
+          errorMessage = "Mật khẩu phải chứa ít nhất một chữ cái thường (a-z).";
+          break;
+        case "form_password_no_uppercase":
+          errorMessage = "Mật khẩu phải chứa ít nhất một chữ cái hoa (A-Z).";
+          break;
+        case "form_password_no_number":
+          errorMessage = "Mật khẩu phải chứa ít nhất một chữ số (0-9).";
+          break;
+        case "form_password_no_special_char":
+          errorMessage = "Mật khẩu phải chứa ít nhất một ký tự đặc biệt (ví dụ: !@#$%^&*).";
+          break;
         case "rate_limit_exceeded":
           errorMessage = "Quá nhiều lần thử. Vui lòng thử lại sau 1 giờ.";
           break;
         default:
-          errorMessage = err?.errors?.[0]?.longMessage || err?.message || errorMessage;
+          // Translate common English error messages to Vietnamese
+          const longMessage = err?.errors?.[0]?.longMessage || err?.message || "";
+
+          if (longMessage.includes("special character")) {
+            errorMessage = "Mật khẩu phải chứa ít nhất một ký tự đặc biệt (ví dụ: !@#$%^&*).";
+          } else if (longMessage.includes("lowercase")) {
+            errorMessage = "Mật khẩu phải chứa ít nhất một chữ cái thường (a-z).";
+          } else if (longMessage.includes("uppercase")) {
+            errorMessage = "Mật khẩu phải chứa ít nhất một chữ cái hoa (A-Z).";
+          } else if (longMessage.includes("number")) {
+            errorMessage = "Mật khẩu phải chứa ít nhất một chữ số (0-9).";
+          } else if (longMessage.includes("at least")) {
+            errorMessage = "Mật khẩu phải có ít nhất 8 ký tự.";
+          } else {
+            errorMessage = longMessage || "Đăng ký thất bại. Vui lòng thử lại.";
+          }
       }
 
       toast.error(errorMessage);

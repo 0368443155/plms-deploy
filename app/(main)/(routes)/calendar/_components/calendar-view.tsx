@@ -44,12 +44,19 @@ export const CalendarView = () => {
     } else if (view === "week") {
       start = startOfWeek(date, { weekStartsOn: 1 });
       end = endOfWeek(date, { weekStartsOn: 1 });
-    } else {
+    } else if (view === "day") {
       // day view
       start = new Date(date);
       start.setHours(0, 0, 0, 0);
       end = new Date(date);
       end.setHours(23, 59, 59, 999);
+    } else {
+      // agenda view - show events for the current month
+      start = startOfMonth(date);
+      end = endOfMonth(date);
+      // Extend to show full weeks for consistency
+      start = startOfWeek(start, { weekStartsOn: 1 });
+      end = endOfWeek(end, { weekStartsOn: 1 });
     }
 
     return {
@@ -73,6 +80,15 @@ export const CalendarView = () => {
       resource: event,
     }));
   }, [calendarData]);
+
+  // Debug logging
+  console.log("Current view:", view);
+  console.log("Date range:", {
+    start: new Date(dateRange.startDate).toISOString(),
+    end: new Date(dateRange.endDate).toISOString(),
+  });
+  console.log("Calendar data:", calendarData);
+  console.log("Events:", events);
 
   const handleSelectSlot = (slotInfo: any) => {
     setSelectedSlot({
@@ -174,6 +190,13 @@ export const CalendarView = () => {
             >
               Ngày
             </Button>
+            <Button
+              variant={view === "agenda" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setView("agenda")}
+            >
+              Lịch trình
+            </Button>
           </div>
         </div>
       </div>
@@ -193,6 +216,7 @@ export const CalendarView = () => {
           onSelectEvent={handleSelectEvent}
           selectable
           popup
+          length={30}
           messages={{
             next: "Tiếp",
             previous: "Trước",

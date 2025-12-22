@@ -59,6 +59,7 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
     initialData.attachedFiles || []
   );
   const [showAttachments, setShowAttachments] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const update = useMutation(api.documents.update);
   const removeIcon = useMutation(api.documents.removeIcon);
@@ -134,8 +135,40 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
     removeIcon({ id: initialData._id });
   };
 
+  // Truncate long filename for toast display
+  const truncateFileName = (fileName: string, maxLength: number = 40): string => {
+    if (fileName.length <= maxLength) return fileName;
+
+    // Extract extension
+    const lastDotIndex = fileName.lastIndexOf(".");
+    const ext = lastDotIndex > 0 ? fileName.substring(lastDotIndex) : "";
+    const nameWithoutExt = lastDotIndex > 0 ? fileName.substring(0, lastDotIndex) : fileName;
+
+    // Calculate how many chars we can show (accounting for "..." and extension)
+    const availableChars = maxLength - ext.length - 3; // 3 for "..."
+
+    if (availableChars <= 10) {
+      // If too short, just show start + ... + ext
+      return `${nameWithoutExt.substring(0, 10)}...${ext}`;
+    }
+
+    // Show start and end with ... in middle
+    const startChars = Math.ceil(availableChars * 0.6); // 60% at start
+    const endChars = Math.floor(availableChars * 0.4); // 40% at end
+
+    return `${nameWithoutExt.substring(0, startChars)}...${nameWithoutExt.substring(nameWithoutExt.length - endChars)}${ext}`;
+  };
+
   // Handle file upload
   const handleFileUpload = useCallback(async (file: File) => {
+    // Validate file size (must be > 0 bytes)
+    if (file.size === 0) {
+      toast.error("Tệp tin không được rỗng (Dung lượng phải > 0 byte).", {
+        description: "Vui lòng chọn một tệp có nội dung"
+      });
+      return;
+    }
+
     setIsUploading(true);
     setUploadProgress(0);
 
@@ -157,10 +190,32 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
       else if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(extension)) fileType = "image";
       else if (["txt", "md"].includes(extension)) fileType = "text";
 
+      // Check for duplicate filename and auto-rename
+      let finalFileName = file.name;
+      const existingFileNames = attachedFiles.map(f => f.fileName);
+
+      if (existingFileNames.includes(finalFileName)) {
+        // Extract name and extension
+        const lastDotIndex = finalFileName.lastIndexOf(".");
+        const nameWithoutExt = lastDotIndex > 0 ? finalFileName.substring(0, lastDotIndex) : finalFileName;
+        const ext = lastDotIndex > 0 ? finalFileName.substring(lastDotIndex) : "";
+
+        // Find next available number
+        let counter = 1;
+        while (existingFileNames.includes(`${nameWithoutExt} (${counter})${ext}`)) {
+          counter++;
+        }
+
+        finalFileName = `${nameWithoutExt} (${counter})${ext}`;
+        toast.message(`File trùng tên. Đã đổi tên thành: ${truncateFileName(finalFileName)}`, {
+          description: "Tên file gốc đã tồn tại trong danh sách đính kèm"
+        });
+      }
+
       const newFile: AttachedFile = {
         id: `file-${Date.now()}`,
         fileUrl: response.url,
-        fileName: file.name,
+        fileName: finalFileName,
         fileType,
         fileSize: file.size,
         uploadedAt: Date.now(),
@@ -173,7 +228,7 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
         return updatedFiles;
       });
 
-      toast.success(`Đã tải lên: ${file.name}`);
+      toast.success(`Đã tải lên: ${truncateFileName(finalFileName)}`);
 
       // Close modal and show attachments after a short delay
       setTimeout(() => {
@@ -188,7 +243,7 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
       setIsUploading(false);
       setUploadProgress(0);
     }
-  }, [edgestore.publicFiles, saveAttachments]);
+  }, [edgestore.publicFiles, saveAttachments, attachedFiles]);
 
   // Handle file input change
   const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -366,7 +421,36 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
             ) : (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-all"
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDragging(true);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDragging(true);
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDragging(false);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDragging(false);
+
+                  const files = e.dataTransfer.files;
+                  if (files && files.length > 0) {
+                    const file = files[0];
+                    handleFileUpload(file);
+                  }
+                }}
+                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${isDragging
+                    ? "border-blue-400 bg-blue-50 dark:bg-blue-900/30"
+                    : "border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-900/20"
+                  }`}
               >
                 <input
                   ref={fileInputRef}
@@ -375,9 +459,10 @@ export const Toolbar = ({ initialData, preview }: ToolbarProps) => {
                   onChange={onFileInputChange}
                   accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.json,.md,.jpg,.jpeg,.png,.gif,.webp,.svg"
                 />
-                <FileUp className="h-10 w-10 mx-auto mb-4 text-slate-400" />
+                <FileUp className={`h-10 w-10 mx-auto mb-4 ${isDragging ? "text-blue-500" : "text-slate-400"
+                  }`} />
                 <p className="font-medium text-slate-700 dark:text-slate-300">
-                  Click để chọn tệp
+                  {isDragging ? "Thả tệp vào đây" : "Click để chọn tệp"}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
                   Hoặc kéo thả tệp vào đây

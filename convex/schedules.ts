@@ -85,24 +85,24 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      throw new Error("Chưa đăng nhập");
     }
 
     const userId = identity.subject;
 
     // Validate time format
     if (!isValidTimeFormat(args.startTime) || !isValidTimeFormat(args.endTime)) {
-      throw new Error("Invalid time format. Use HH:mm");
+      throw new Error("Định dạng thời gian không hợp lệ. Vui lòng sử dụng định dạng HH:mm");
     }
 
     // Validate dayOfWeek
     if (args.dayOfWeek < 0 || args.dayOfWeek > 6) {
-      throw new Error("Invalid day of week. Must be 0-6");
+      throw new Error("Ngày trong tuần không hợp lệ");
     }
 
     // Validate startTime < endTime
     if (args.startTime >= args.endTime) {
-      throw new Error("Start time must be before end time");
+      throw new Error("Thời gian bắt đầu phải trước thời gian kết thúc");
     }
 
     // Check for conflicts
@@ -119,9 +119,11 @@ export const create = mutation({
 
     if (conflictResult.hasConflict) {
       const conflicting = conflictResult.conflictingSchedule;
+      const dayNames = ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
+      const dayName = dayNames[args.dayOfWeek];
       const errorMessage = conflicting
-        ? `Schedule conflict detected. Another schedule "${conflicting.subjectName}" (${conflicting.startTime} - ${conflicting.endTime}) overlaps with this time slot (${args.startTime} - ${args.endTime})`
-        : "Schedule conflict detected. Another schedule overlaps with this time slot";
+        ? `Không thể thêm lịch học. Bạn đã có lịch "${conflicting.subjectName}" trong khung giờ ${conflicting.startTime} - ${conflicting.endTime}, ${dayName}.`
+        : `Không thể thêm lịch học. Bạn đã có lịch khác trong khung giờ ${args.startTime} - ${args.endTime}, ${dayName}.`;
       throw new Error(errorMessage);
     }
 
@@ -151,7 +153,7 @@ export const getAll = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      throw new Error("Chưa đăng nhập");
     }
 
     const userId = identity.subject;
@@ -211,13 +213,13 @@ export const getByDay = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      throw new Error("Chưa đăng nhập");
     }
 
     const userId = identity.subject;
 
     if (args.dayOfWeek < 0 || args.dayOfWeek > 6) {
-      throw new Error("Invalid day of week. Must be 0-6");
+      throw new Error("Ngày trong tuần không hợp lệ");
     }
 
     const schedules = await ctx.db
@@ -240,7 +242,7 @@ export const getById = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      throw new Error("Chưa đăng nhập");
     }
 
     const userId = identity.subject;
@@ -252,7 +254,7 @@ export const getById = query({
     }
 
     if (schedule.userId !== userId) {
-      throw new Error("Unauthorized");
+      throw new Error("Không có quyền truy cập");
     }
 
     return schedule;
@@ -278,7 +280,7 @@ export const update = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      throw new Error("Chưa đăng nhập");
     }
 
     const userId = identity.subject;
@@ -287,24 +289,24 @@ export const update = mutation({
     const existingSchedule = await ctx.db.get(id);
 
     if (!existingSchedule) {
-      throw new Error("Schedule not found");
+      throw new Error("Không tìm thấy lịch học");
     }
 
     if (existingSchedule.userId !== userId) {
-      throw new Error("Unauthorized");
+      throw new Error("Không có quyền truy cập");
     }
 
     // Validate time format if provided
     if (updates.startTime && !isValidTimeFormat(updates.startTime)) {
-      throw new Error("Invalid start time format. Use HH:mm");
+      throw new Error("Định dạng thời gian bắt đầu không hợp lệ. Vui lòng sử dụng định dạng HH:mm");
     }
     if (updates.endTime && !isValidTimeFormat(updates.endTime)) {
-      throw new Error("Invalid end time format. Use HH:mm");
+      throw new Error("Định dạng thời gian kết thúc không hợp lệ. Vui lòng sử dụng định dạng HH:mm");
     }
 
     // Validate dayOfWeek if provided
     if (updates.dayOfWeek !== undefined && (updates.dayOfWeek < 0 || updates.dayOfWeek > 6)) {
-      throw new Error("Invalid day of week. Must be 0-6");
+      throw new Error("Ngày trong tuần không hợp lệ");
     }
 
     // Check for conflicts if time or day changed
@@ -317,7 +319,7 @@ export const update = mutation({
 
       // Validate startTime < endTime
       if (newSchedule.startTime >= newSchedule.endTime) {
-        throw new Error("Start time must be before end time");
+        throw new Error("Thời gian bắt đầu phải trước thời gian kết thúc");
       }
 
       const conflictResult = await checkScheduleConflict(
@@ -329,9 +331,11 @@ export const update = mutation({
 
       if (conflictResult.hasConflict) {
         const conflicting = conflictResult.conflictingSchedule;
+        const dayNames = ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
+        const dayName = dayNames[newSchedule.dayOfWeek];
         const errorMessage = conflicting
-          ? `Schedule conflict detected. Another schedule "${conflicting.subjectName}" (${conflicting.startTime} - ${conflicting.endTime}) overlaps with this time slot (${newSchedule.startTime} - ${newSchedule.endTime})`
-          : "Schedule conflict detected. Another schedule overlaps with this time slot";
+          ? `Không thể cập nhật lịch học. Bạn đã có lịch "${conflicting.subjectName}" trong khung giờ ${conflicting.startTime} - ${conflicting.endTime}, ${dayName}.`
+          : `Không thể cập nhật lịch học. Bạn đã có lịch khác trong khung giờ ${newSchedule.startTime} - ${newSchedule.endTime}, ${dayName}.`;
         throw new Error(errorMessage);
       }
     }
@@ -351,7 +355,7 @@ export const remove = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      throw new Error("Chưa đăng nhập");
     }
 
     const userId = identity.subject;
@@ -359,11 +363,11 @@ export const remove = mutation({
     const schedule = await ctx.db.get(args.id);
 
     if (!schedule) {
-      throw new Error("Schedule not found");
+      throw new Error("Không tìm thấy lịch học");
     }
 
     if (schedule.userId !== userId) {
-      throw new Error("Unauthorized");
+      throw new Error("Không có quyền truy cập");
     }
 
     await ctx.db.delete(args.id);
@@ -378,7 +382,7 @@ export const removeDuplicates = mutation({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      throw new Error("Chưa đăng nhập");
     }
 
     const userId = identity.subject;

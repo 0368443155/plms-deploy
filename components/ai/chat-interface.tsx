@@ -93,7 +93,7 @@ export const ChatInterface = ({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl h-[80vh] flex flex-col p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 pr-8">
             <DialogTitle className="flex items-center gap-2">
               <MessageSquare className="h-5 w-5 text-blue-500" />
               Hỏi đáp AI
@@ -102,7 +102,7 @@ export const ChatInterface = ({
               variant="outline"
               size="sm"
               onClick={handleNewSession}
-              className="gap-2"
+              className="gap-2 self-start"
             >
               <PlusCircle className="h-4 w-4" />
               Cuộc trò chuyện mới

@@ -284,14 +284,14 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
 
       {/* Table */}
       <div className="flex-1 overflow-auto border rounded-lg">
-        <table className="w-full border-collapse min-w-full">
+        <table className="w-full border-collapse min-w-full" style={{ tableLayout: "fixed" }}>
           <thead className="bg-muted/50 sticky top-0 z-10">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column._id}
                   className="border p-3 text-left font-semibold"
-                  style={{ minWidth: column.width || 150 }}
+                  style={{ width: column.width || 200, minWidth: column.width || 200, maxWidth: column.width || 200 }}
                 >
                   <div className="flex items-center justify-between">
                     <span>{column.name}</span>
@@ -326,7 +326,19 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
                     return (
                       <td
                         key={column._id}
-                        className="border p-2 cursor-pointer"
+                        className={`border cursor-pointer ${isEditing && column.type === "select"
+                          ? "p-3" // More padding for select dropdown
+                          : "p-2"
+                          }`}
+                        style={{
+                          width: column.width || 200,
+                          minWidth: column.width || 200,
+                          maxWidth: column.width || 200,
+                          overflow: "hidden",
+                          wordWrap: "break-word",
+                          wordBreak: "break-word",
+                          whiteSpace: "normal"
+                        }}
                         onClick={() =>
                           handleCellClick(row._id, column._id, cellValue)
                         }
@@ -334,7 +346,7 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
                         {isEditing ? (
                           column.type === "checkbox" ? (
                             // Checkbox editing mode: show checkbox + text input
-                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-2 max-w-full" onClick={(e) => e.stopPropagation()}>
                               <input
                                 type="checkbox"
                                 checked={editingValue === "true" || editingValue.startsWith("true")}
@@ -373,27 +385,36 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
                                   )
                                 }
                                 placeholder="Nhập tên checkbox..."
-                                className="h-8 flex-1"
+                                className="h-8 flex-1 min-w-0"
                               />
                             </div>
                           ) : column.type === "select" ? (
                             // Select editing mode: show dropdown with options + input for new value
-                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex flex-col gap-2 w-full max-w-full" onClick={(e) => e.stopPropagation()}>
+                              {/* Dropdown with existing options - auto-opens with size attribute */}
                               <select
                                 value={editingValue}
+                                size={Math.min(5, (() => {
+                                  try {
+                                    const options = column.config ? JSON.parse(column.config) : [];
+                                    return Math.max(3, options.length + 1); // +1 for "-- Chọn --"
+                                  } catch {
+                                    return 3;
+                                  }
+                                })())}
                                 onChange={(e) => {
                                   const selectedValue = e.target.value;
-                                  setEditingValue(selectedValue);
-                                  setSelectInputValue(""); // Clear input when selecting from dropdown
-                                  // Save immediately when selecting from dropdown
                                   if (selectedValue) {
+                                    setEditingValue(selectedValue);
+                                    setSelectInputValue(""); // Clear input when selecting from dropdown
+                                    // Save immediately when selecting from dropdown
                                     debouncedUpdateCell(row._id, column._id, selectedValue);
                                     setEditingCell(null);
                                   }
                                 }}
-                                className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 max-h-40 overflow-y-auto"
                               >
-                                <option value="">-- Chọn --</option>
+                                <option value="">-- Chọn từ danh sách --</option>
                                 {(() => {
                                   try {
                                     const options = column.config ? JSON.parse(column.config) : [];
@@ -407,13 +428,22 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
                                   }
                                 })()}
                               </select>
+
+                              {/* Divider */}
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 h-px bg-border"></div>
+                                <span className="text-xs text-muted-foreground px-2">hoặc</span>
+                                <div className="flex-1 h-px bg-border"></div>
+                              </div>
+
+                              {/* Input for new value */}
                               <Input
                                 type="text"
-                                placeholder="Hoặc nhập mới..."
+                                placeholder="Nhập giá trị mới..."
                                 value={selectInputValue}
                                 autoFocus
                                 onChange={(e) => {
-                                  // Only update selectInputValue, not editingValue
+                                  // Update selectInputValue to show what user is typing
                                   setSelectInputValue(e.target.value);
                                 }}
                                 onBlur={() => {
@@ -467,7 +497,7 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
                                     setSelectInputValue("");
                                   }
                                 }}
-                                className="h-8 flex-1"
+                                className="h-9 w-full min-w-0"
                               />
                             </div>
                           ) : (
@@ -494,11 +524,11 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
                                 )
                               }
                               autoFocus
-                              className="h-8"
+                              className="h-8 w-full min-w-0"
                             />
                           )
                         ) : (
-                          <div className="min-h-[32px] flex items-center gap-2">
+                          <div className="min-h-[32px] flex items-start gap-2" style={{ wordWrap: "break-word", wordBreak: "break-word", overflowWrap: "break-word" }}>
                             {column.type === "checkbox" ? (
                               <>
                                 <input
@@ -507,7 +537,7 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
                                   readOnly
                                   className="cursor-pointer h-4 w-4"
                                 />
-                                <span className="text-sm">
+                                <span className="text-sm break-words" style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>
                                   {cellValue.includes("|")
                                     ? cellValue.substring(cellValue.indexOf("|") + 1)
                                     : cellValue === "true" || cellValue === "false"
@@ -517,7 +547,7 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
                               </>
                             ) : column.type === "select" ? (
                               cellValue ? (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 break-words" style={{ wordBreak: "break-word", maxWidth: "100%" }}>
                                   {cellValue}
                                 </span>
                               ) : (
@@ -526,7 +556,7 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
                                 </span>
                               )
                             ) : (
-                              <span className="text-sm">
+                              <span className="text-sm break-words" style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>
                                 {cellValue || (
                                   <span className="text-muted-foreground italic">
                                     Click để chỉnh sửa

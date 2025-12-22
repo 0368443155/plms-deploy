@@ -55,8 +55,10 @@ function hashContent(content: string): string {
  * Tries multiple endpoints and formats
  */
 async function summarizeWithSambaNova(text: string, apiKey: string): Promise<string> {
-  const prompt = `Hãy tóm tắt nội dung sau một cách ngắn gọn và súc tích (khoảng 3-5 câu):\n\n${text.substring(0, 2000)}`;
-  
+  // Increase limit to capture more content (up to ~8000 chars for better coverage)
+  const maxChars = Math.min(text.length, 8000);
+  const prompt = `Hãy tóm tắt TOÀN BỘ nội dung sau một cách ngắn gọn và súc tích. Nếu có nhiều chương/phần, hãy tóm tắt TẤT CẢ các phần:\n\n${text.substring(0, maxChars)}${text.length > maxChars ? '\n\n[...nội dung tiếp theo...]' : ''}`;
+
   // Try different SambaNova API endpoints and formats
   const endpointsToTry = [
     {
@@ -73,7 +75,7 @@ async function summarizeWithSambaNova(text: string, apiKey: string): Promise<str
             content: prompt
           }
         ],
-        max_tokens: 200,
+        max_tokens: 500,  // Increase to allow longer summaries
         temperature: 0.7,
       },
       extractResult: (data: any) => {
@@ -86,7 +88,7 @@ async function summarizeWithSambaNova(text: string, apiKey: string): Promise<str
       body: {
         model: "Meta-Llama-3.1-8B-Instruct",
         prompt: prompt,
-        max_tokens: 200,
+        max_tokens: 500,  // Increase to allow longer summaries
         temperature: 0.7,
       },
       extractResult: (data: any) => {
@@ -99,7 +101,7 @@ async function summarizeWithSambaNova(text: string, apiKey: string): Promise<str
       body: {
         model: "Meta-Llama-3.1-8B-Instruct",
         prompt: prompt,
-        max_tokens: 200,
+        max_tokens: 500,  // Increase to allow longer summaries
         temperature: 0.7,
       },
       extractResult: (data: any) => {
@@ -139,7 +141,7 @@ async function summarizeWithSambaNova(text: string, apiKey: string): Promise<str
       continue;
     }
   }
-  
+
   throw new Error("All SambaNova endpoints failed");
 }
 
@@ -149,7 +151,7 @@ async function summarizeWithSambaNova(text: string, apiKey: string): Promise<str
  */
 async function summarizeWithHuggingFace(text: string): Promise<string> {
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-  
+
   // List of free Hugging Face models to try (no API key needed)
   const modelsToTry = [
     {
@@ -200,7 +202,7 @@ async function summarizeWithHuggingFace(text: string): Promise<string> {
         const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 10000; // Default 10 seconds
         console.log(`Model ${model.url} is loading, waiting ${waitTime}ms...`);
         await sleep(Math.min(waitTime, 20000)); // Max 20 seconds
-        
+
         // Retry once
         response = await fetch(model.url, {
           method: "POST",
@@ -239,7 +241,7 @@ async function summarizeWithHuggingFace(text: string): Promise<string> {
     const simpleSummary = sentences.slice(0, 3).join(". ") + ".";
     return simpleSummary;
   }
-  
+
   throw new Error("All Hugging Face models failed and unable to create simple summary");
 }
 
@@ -254,7 +256,7 @@ async function chatWithSambaNova(
 ): Promise<string> {
   // Build conversation context
   const systemPrompt = `Bạn là một trợ lý AI chuyên trả lời câu hỏi dựa trên nội dung tài liệu. Hãy trả lời câu hỏi một cách chính xác và hữu ích dựa trên nội dung tài liệu sau:\n\n${documentContext.substring(0, 2000)}`;
-  
+
   // Build messages array
   const messages = [
     { role: "system", content: systemPrompt },
@@ -318,7 +320,7 @@ async function chatWithSambaNova(
       continue;
     }
   }
-  
+
   throw new Error("All SambaNova chat endpoints failed");
 }
 
@@ -331,7 +333,7 @@ async function chatWithHuggingFace(
 ): Promise<string> {
   // Use a simple Q&A model from Hugging Face
   const prompt = `Dựa trên nội dung sau, trả lời câu hỏi:\n\nNội dung: ${documentContext.substring(0, 1000)}\n\nCâu hỏi: ${message}\n\nTrả lời:`;
-  
+
   try {
     // Try using a conversational model
     const response = await fetch("https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium", {
@@ -399,6 +401,25 @@ const summarizeDocumentHandler = async (
   // Calculate content hash
   const contentHash = hashContent(plainText);
 
+  // If forcing regeneration, delete old cache first
+  if (args.forceRegenerate) {
+    try {
+      const oldSummaries = await ctx.runQuery(internal.ai.getAllSummariesForDocument, {
+        documentId: args.documentId,
+      });
+
+      for (const oldSummary of oldSummaries) {
+        await ctx.runMutation(internal.ai.deleteSummary, {
+          summaryId: oldSummary._id,
+        });
+      }
+      console.log(`Deleted ${oldSummaries.length} old summaries for force regeneration`);
+    } catch (error) {
+      console.error("Error deleting old summaries:", error);
+      // Continue anyway
+    }
+  }
+
   // Check cache if not forcing regeneration
   if (!args.forceRegenerate) {
     const cached: {
@@ -427,7 +448,7 @@ const summarizeDocumentHandler = async (
 
   // Call Gemini API
   const genAI = new GoogleGenerativeAI(apiKey);
-  
+
   // Try different models in order of preference
   // Free tier models first, then paid tier
   // Note: Use simple model names - version numbers may not work
@@ -441,12 +462,13 @@ const summarizeDocumentHandler = async (
     "gemini-3-pro",             // Latest 3.0 (may require paid)
     "gemini-2.5-pro",           // Requires paid tier ❌
   ];
-  
-  const prompt = `Hãy tóm tắt nội dung sau một cách ngắn gọn và súc tích (khoảng 3-5 câu):
+
+  const prompt = `Hãy tóm tắt TOÀN BỘ nội dung tài liệu sau một cách ngắn gọn và súc tích. 
+Nếu tài liệu có nhiều chương hoặc phần, hãy đảm bảo tóm tắt TẤT CẢ các phần, không chỉ phần đầu.
 
 ${plainText}
 
-Tóm tắt:`;
+Tóm tắt toàn bộ tài liệu:`;
 
   // Helper function to sleep
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -456,10 +478,16 @@ Tóm tắt:`;
   let usedModel = modelsToTry[0];
   let lastError: any = null;
   let quotaExceededCount = 0;
-  
+
   for (const modelName of modelsToTry) {
     try {
-      const testModel = genAI.getGenerativeModel({ model: modelName });
+      const testModel = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          maxOutputTokens: 1000,  // Increase to prevent truncation
+          temperature: 0.7,
+        }
+      });
       const result = await testModel.generateContent(prompt);
       const response = await result.response;
       summary = response.text();
@@ -468,18 +496,18 @@ Tóm tắt:`;
     } catch (err: any) {
       console.error(`Model ${modelName} failed:`, err.message);
       lastError = err;
-      
+
       if (err.status === 404) {
         // Model not found - Try next model
         console.error(`Model ${modelName} not found, trying next model...`);
         continue;
       }
-      
+
       if (err.status === 429) {
         // Quota exceeded - Try next model with retry logic
         quotaExceededCount++;
         console.error(`Model ${modelName} quota exceeded (${quotaExceededCount}/${modelsToTry.length}), trying next model...`);
-        
+
         // If this is not the last model, try next one
         if (quotaExceededCount < modelsToTry.length) {
           // Add small delay before trying next model
@@ -504,12 +532,12 @@ Tóm tắt:`;
         }
         continue;
       }
-      
+
       // Other errors, throw
       throw err;
     }
   }
-  
+
   if (!summary) {
     // Provide helpful error message
     const errorMsg = lastError?.message || "Unknown error";
@@ -519,7 +547,7 @@ Tóm tắt:`;
     if (errorMsg.includes("429") || errorMsg.includes("quota")) {
       // Try SambaNova first (has $5 free credit), then Hugging Face
       const sambaNovaApiKey = process.env.SAMBANOVA_API_KEY;
-      
+
       if (sambaNovaApiKey) {
         console.log("All Gemini models exceeded quota. Trying SambaNova fallback...");
         try {
@@ -531,7 +559,7 @@ Tóm tắt:`;
           // Continue to Hugging Face fallback
         }
       }
-      
+
       // If SambaNova failed or not configured, try Hugging Face
       if (!summary) {
         console.log("Trying Hugging Face fallback...");
@@ -564,36 +592,36 @@ Tóm tắt:`;
       fromCache: false,
       model: usedModel,
     };
-    } catch (error: any) {
-      console.error("Gemini API error:", error);
-      console.error("Error details:", {
-        message: error.message,
-        status: error.status,
-        statusText: error.statusText,
-        code: error.code,
-      });
+  } catch (error: any) {
+    console.error("Gemini API error:", error);
+    console.error("Error details:", {
+      message: error.message,
+      status: error.status,
+      statusText: error.statusText,
+      code: error.code,
+    });
 
-      // Check for specific error types
-      if (error.message?.includes("quota") || error.message?.includes("429") || error.status === 429) {
-        // Check if it's a specific model quota issue
-        if (error.message?.includes("gemini-2.5-pro")) {
-          throw new Error("Model gemini-2.5-pro requires paid tier. Code will auto-fallback to free tier models.");
-        }
-        throw new Error("API quota exceeded. Please try again later or use a different model.");
+    // Check for specific error types
+    if (error.message?.includes("quota") || error.message?.includes("429") || error.status === 429) {
+      // Check if it's a specific model quota issue
+      if (error.message?.includes("gemini-2.5-pro")) {
+        throw new Error("Model gemini-2.5-pro requires paid tier. Code will auto-fallback to free tier models.");
       }
-
-      if (error.message?.includes("API_KEY_INVALID") || error.message?.includes("401") || error.status === 401) {
-        throw new Error("Invalid API key. Please check your GEMINI_API_KEY configuration.");
-      }
-
-      if (error.message?.includes("403") || error.status === 403) {
-        throw new Error("API access forbidden. Please check your API key permissions.");
-      }
-
-      // Return more detailed error message
-      const errorMessage = error.message || "Unknown error";
-      throw new Error(`Failed to generate summary: ${errorMessage}. Please check your API key and quota.`);
+      throw new Error("API quota exceeded. Please try again later or use a different model.");
     }
+
+    if (error.message?.includes("API_KEY_INVALID") || error.message?.includes("401") || error.status === 401) {
+      throw new Error("Invalid API key. Please check your GEMINI_API_KEY configuration.");
+    }
+
+    if (error.message?.includes("403") || error.status === 403) {
+      throw new Error("API access forbidden. Please check your API key permissions.");
+    }
+
+    // Return more detailed error message
+    const errorMessage = error.message || "Unknown error";
+    throw new Error(`Failed to generate summary: ${errorMessage}. Please check your API key and quota.`);
+  }
 };
 
 export const summarizeDocument = action({
@@ -686,6 +714,32 @@ export const getSummary = query({
   },
 });
 
+/**
+ * Get all summaries for a document (internal)
+ */
+export const getAllSummariesForDocument = internalQuery({
+  args: { documentId: v.id("documents") },
+  handler: async (ctx, args) => {
+    const summaries = await ctx.db
+      .query("aiSummaries")
+      .withIndex("by_document", (q) => q.eq("documentId", args.documentId))
+      .collect();
+
+    return summaries;
+  },
+});
+
+/**
+ * Delete a summary (internal)
+ */
+export const deleteSummary = internalMutation({
+  args: { summaryId: v.id("aiSummaries") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.summaryId);
+  },
+});
+
+
 // ========================================
 // UC19: AI CHAT
 // ========================================
@@ -721,12 +775,12 @@ const chatWithAIHandler = async (
       documentId: args.documentId,
     });
   }
-  
+
   // Ensure sessionId is defined
   if (!sessionId) {
     throw new Error("Failed to create chat session");
   }
-  
+
   // Now sessionId is guaranteed to be defined
   const finalSessionId: Id<"chatSessions"> = sessionId;
 
@@ -746,7 +800,7 @@ const chatWithAIHandler = async (
 
   // Build conversation for Gemini
   const genAI = new GoogleGenerativeAI(apiKey);
-  
+
   // Try different models in order of preference
   // Free tier models first, then paid tier
   // Note: Use simple model names without version numbers
@@ -769,17 +823,55 @@ const chatWithAIHandler = async (
   let chat: any = null;
   let lastError: any = null;
   let quotaExceededCount = 0;
-  
+
+  // Check if document is empty or too short
+  const isDocumentEmpty = !documentContext || documentContext.trim().length < 50;
+
+  // Build strict system prompt
+  const systemPrompt = isDocumentEmpty
+    ? `BẠN LÀ TRỢ LÝ AI CHUYÊN TRẢ LỜI DỰA TRÊN TÀI LIỆU.
+
+⚠️ CẢNH BÁO: Tài liệu hiện tại TRỐNG hoặc không có nội dung.
+
+QUY TẮC BẮT BUỘC:
+1. BẠN PHẢI TỪ CHỐI trả lời MỌI câu hỏi
+2. Luôn trả lời: "Xin lỗi, tài liệu hiện tại không có nội dung. Vui lòng thêm nội dung vào tài liệu trước khi đặt câu hỏi."
+3. KHÔNG ĐƯỢC sử dụng kiến thức nền
+4. KHÔNG ĐƯỢC trả lời bất kỳ câu hỏi nào, kể cả câu hỏi chung
+
+Tài liệu: [TRỐNG]`
+    : `BẠN LÀ TRỢ LÝ AI CHUYÊN TRẢ LỜI DỰA TRÊN TÀI LIỆU.
+
+QUY TẮC BẮT BUỘC (STRICT CONTEXT):
+1. CHỈ trả lời dựa trên nội dung tài liệu bên dưới
+2. KHÔNG ĐƯỢC sử dụng kiến thức nền hoặc thông tin bên ngoài
+3. Nếu câu hỏi KHÔNG liên quan đến tài liệu → Trả lời: "Xin lỗi, tôi không tìm thấy thông tin này trong tài liệu của bạn."
+4. Nếu tài liệu KHÔNG chứa thông tin để trả lời → Trả lời: "Xin lỗi, tài liệu không có thông tin về vấn đề này."
+5. PHÁT HIỆN câu hỏi gài (chứa tiền đề sai) → Đính chính: "Câu hỏi có vẻ chứa thông tin không chính xác. Theo tài liệu..."
+6. KHÔNG ĐƯỢC bịa đặt, suy luận, hoặc thêm thông tin không có trong tài liệu
+7. Nếu không chắc chắn → Nói rõ: "Tài liệu không đề cập rõ ràng về điều này."
+
+NỘI DUNG TÀI LIỆU:
+${documentContext}
+
+Hãy trả lời các câu hỏi CHÍNH XÁC dựa trên nội dung trên.`;
+
   for (const modelName of modelsToTry) {
     try {
-      const testModel = genAI.getGenerativeModel({ model: modelName });
+      const testModel = genAI.getGenerativeModel({
+        model: modelName,
+        generationConfig: {
+          temperature: 0.3,  // Lower temperature to reduce hallucination
+          maxOutputTokens: 500,
+        }
+      });
       chat = testModel.startChat({
         history: [
           {
             role: "user",
             parts: [
               {
-                text: `Đây là nội dung tài liệu:\n\n${documentContext}\n\nHãy trả lời các câu hỏi dựa trên nội dung này.`,
+                text: systemPrompt,
               },
             ],
           },
@@ -787,7 +879,9 @@ const chatWithAIHandler = async (
             role: "model",
             parts: [
               {
-                text: "Tôi đã hiểu nội dung tài liệu. Bạn có thể hỏi tôi bất kỳ câu hỏi nào về nội dung này.",
+                text: isDocumentEmpty
+                  ? "Tôi hiểu. Tài liệu hiện tại trống. Tôi sẽ từ chối trả lời mọi câu hỏi và yêu cầu người dùng thêm nội dung vào tài liệu trước."
+                  : "Tôi đã hiểu nội dung tài liệu và các quy tắc. Tôi sẽ CHỈ trả lời dựa trên nội dung tài liệu, KHÔNG sử dụng kiến thức nền, và từ chối trả lời nếu thông tin không có trong tài liệu.",
               },
             ],
           },
@@ -802,18 +896,18 @@ const chatWithAIHandler = async (
     } catch (err: any) {
       console.error(`Model ${modelName} failed:`, err.message);
       lastError = err;
-      
+
       if (err.status === 404) {
         // Model not found - Try next model
         console.error(`Model ${modelName} not found, trying next model...`);
         continue;
       }
-      
+
       if (err.status === 429) {
         // Quota exceeded - Try next model with retry logic
         quotaExceededCount++;
         console.error(`Model ${modelName} quota exceeded (${quotaExceededCount}/${modelsToTry.length}), trying next model...`);
-        
+
         // If this is not the last model, try next one
         if (quotaExceededCount < modelsToTry.length) {
           // Add small delay before trying next model
@@ -859,30 +953,30 @@ const chatWithAIHandler = async (
         }
         continue;
       }
-      
+
       // Other errors, throw
       throw err;
     }
   }
-  
+
   if (!chat) {
     // Try fallback APIs (SambaNova and Hugging Face)
     const errorMsg = lastError?.message || "Unknown error";
     const sambaNovaApiKey = process.env.SAMBANOVA_API_KEY;
-    
+
     // Try SambaNova first if API key is available
     if (sambaNovaApiKey) {
       console.log("All Gemini models failed. Trying SambaNova fallback for chat...");
       try {
         const response = await chatWithSambaNova(args.message, documentContext, history, sambaNovaApiKey);
-        
+
         // Save user message
         await ctx.runMutation(internal.ai.saveChatMessage, {
           sessionId: finalSessionId,
           role: "user",
           content: args.message,
         });
-        
+
         // Save assistant message
         await ctx.runMutation(internal.ai.saveChatMessage, {
           sessionId: finalSessionId,
@@ -890,12 +984,12 @@ const chatWithAIHandler = async (
           content: response,
           model: "sambanova/meta-llama-3.1-8b-instruct",
         });
-        
+
         // Update session timestamp
         await ctx.runMutation(internal.ai.updateSessionTimestamp, {
           sessionId: finalSessionId,
         });
-        
+
         return {
           sessionId: finalSessionId,
           response: response,
@@ -906,19 +1000,19 @@ const chatWithAIHandler = async (
         // Continue to Hugging Face fallback
       }
     }
-    
+
     // Try Hugging Face fallback
     console.log("Trying Hugging Face fallback for chat...");
     try {
       const response = await chatWithHuggingFace(args.message, documentContext);
-      
+
       // Save user message
       await ctx.runMutation(internal.ai.saveChatMessage, {
         sessionId: finalSessionId,
         role: "user",
         content: args.message,
       });
-      
+
       // Save assistant message
       await ctx.runMutation(internal.ai.saveChatMessage, {
         sessionId: finalSessionId,
@@ -926,12 +1020,12 @@ const chatWithAIHandler = async (
         content: response,
         model: "huggingface/dialogpt",
       });
-      
+
       // Update session timestamp
       await ctx.runMutation(internal.ai.updateSessionTimestamp, {
         sessionId: finalSessionId,
       });
-      
+
       return {
         sessionId: finalSessionId,
         response: response,
@@ -941,7 +1035,7 @@ const chatWithAIHandler = async (
       console.error("Hugging Face chat fallback also failed:", hfError);
       // Continue to error message
     }
-    
+
     // If all fallbacks failed, provide helpful error message
     if (errorMsg.includes("404") || errorMsg.includes("not found")) {
       throw new Error(`Không tìm thấy model Gemini nào khả dụng. Vui lòng kiểm tra API key và đảm bảo Generative AI API đã được bật. Đã thử các models: ${modelsToTry.join(", ")}`);
@@ -964,7 +1058,7 @@ const chatWithAIHandler = async (
     let result: any = null;
     let retryCount = 0;
     const maxRetries = 2;
-    
+
     while (retryCount <= maxRetries) {
       try {
         result = await chat.sendMessage(args.message);
@@ -980,11 +1074,11 @@ const chatWithAIHandler = async (
         throw retryError;
       }
     }
-    
+
     if (!result) {
       throw new Error("Failed to get response after retries");
     }
-    
+
     const response = await result.response;
     const text = response.text();
 
@@ -1006,95 +1100,95 @@ const chatWithAIHandler = async (
       response: text,
       model: usedModel,
     };
-    } catch (error: any) {
-      console.error("Gemini chat sendMessage error:", error);
-      
-      // Try fallback APIs when sendMessage fails
-      const sambaNovaApiKey = process.env.SAMBANOVA_API_KEY;
-      
-      // Try SambaNova fallback
-      if (sambaNovaApiKey) {
-        console.log("Gemini sendMessage failed. Trying SambaNova fallback...");
-        try {
-          const response = await chatWithSambaNova(args.message, documentContext, history, sambaNovaApiKey);
-          
-          // Save assistant message (user message already saved)
-          await ctx.runMutation(internal.ai.saveChatMessage, {
-            sessionId: finalSessionId,
-            role: "assistant",
-            content: response,
-            model: "sambanova/meta-llama-3.1-8b-instruct",
-          });
-          
-          // Update session timestamp
-          await ctx.runMutation(internal.ai.updateSessionTimestamp, {
-            sessionId: finalSessionId,
-          });
-          
-          return {
-            sessionId: finalSessionId,
-            response: response,
-            model: "sambanova/meta-llama-3.1-8b-instruct",
-          };
-        } catch (snError: any) {
-          console.error("SambaNova fallback failed:", snError);
-          // Continue to Hugging Face fallback
-        }
-      }
-      
-      // Try Hugging Face fallback
-      console.log("Trying Hugging Face fallback...");
+  } catch (error: any) {
+    console.error("Gemini chat sendMessage error:", error);
+
+    // Try fallback APIs when sendMessage fails
+    const sambaNovaApiKey = process.env.SAMBANOVA_API_KEY;
+
+    // Try SambaNova fallback
+    if (sambaNovaApiKey) {
+      console.log("Gemini sendMessage failed. Trying SambaNova fallback...");
       try {
-        const response = await chatWithHuggingFace(args.message, documentContext);
-        
+        const response = await chatWithSambaNova(args.message, documentContext, history, sambaNovaApiKey);
+
         // Save assistant message (user message already saved)
         await ctx.runMutation(internal.ai.saveChatMessage, {
           sessionId: finalSessionId,
           role: "assistant",
           content: response,
-          model: "huggingface/dialogpt",
+          model: "sambanova/meta-llama-3.1-8b-instruct",
         });
-        
+
         // Update session timestamp
         await ctx.runMutation(internal.ai.updateSessionTimestamp, {
           sessionId: finalSessionId,
         });
-        
+
         return {
           sessionId: finalSessionId,
           response: response,
-          model: "huggingface/dialogpt",
+          model: "sambanova/meta-llama-3.1-8b-instruct",
         };
-      } catch (hfError: any) {
-        console.error("Hugging Face fallback also failed:", hfError);
-        // Continue to error message
+      } catch (snError: any) {
+        console.error("SambaNova fallback failed:", snError);
+        // Continue to Hugging Face fallback
       }
+    }
 
-      // If all fallbacks failed, provide error message
-      console.error("Error details:", {
-        message: error.message,
-        status: error.status,
-        statusText: error.statusText,
-        code: error.code,
+    // Try Hugging Face fallback
+    console.log("Trying Hugging Face fallback...");
+    try {
+      const response = await chatWithHuggingFace(args.message, documentContext);
+
+      // Save assistant message (user message already saved)
+      await ctx.runMutation(internal.ai.saveChatMessage, {
+        sessionId: finalSessionId,
+        role: "assistant",
+        content: response,
+        model: "huggingface/dialogpt",
       });
 
-      // Check for specific error types
-      if (error.message?.includes("quota") || error.message?.includes("429") || error.status === 429) {
-        throw new Error(`⚠️ Tất cả các models Gemini đã vượt quá quota miễn phí.\n\n💡 Giải pháp:\n1. Đợi 1-2 phút và thử lại (quota có thể được reset)\n2. Kiểm tra quota tại: https://aistudio.google.com/app/apikey\n3. Nâng cấp lên gói trả phí nếu cần sử dụng nhiều hơn`);
-      }
+      // Update session timestamp
+      await ctx.runMutation(internal.ai.updateSessionTimestamp, {
+        sessionId: finalSessionId,
+      });
 
-      if (error.message?.includes("API_KEY_INVALID") || error.message?.includes("401") || error.status === 401) {
-        throw new Error("API key không hợp lệ. Vui lòng kiểm tra cấu hình GEMINI_API_KEY.");
-      }
-
-      if (error.message?.includes("403") || error.status === 403) {
-        throw new Error("Không có quyền truy cập API. Vui lòng kiểm tra quyền của API key.");
-      }
-
-      // Return more detailed error message
-      const errorMessage = error.message || "Unknown error";
-      throw new Error(`Không thể lấy phản hồi: ${errorMessage.substring(0, 150)}... Vui lòng kiểm tra API key và quota.`);
+      return {
+        sessionId: finalSessionId,
+        response: response,
+        model: "huggingface/dialogpt",
+      };
+    } catch (hfError: any) {
+      console.error("Hugging Face fallback also failed:", hfError);
+      // Continue to error message
     }
+
+    // If all fallbacks failed, provide error message
+    console.error("Error details:", {
+      message: error.message,
+      status: error.status,
+      statusText: error.statusText,
+      code: error.code,
+    });
+
+    // Check for specific error types
+    if (error.message?.includes("quota") || error.message?.includes("429") || error.status === 429) {
+      throw new Error(`⚠️ Tất cả các models Gemini đã vượt quá quota miễn phí.\n\n💡 Giải pháp:\n1. Đợi 1-2 phút và thử lại (quota có thể được reset)\n2. Kiểm tra quota tại: https://aistudio.google.com/app/apikey\n3. Nâng cấp lên gói trả phí nếu cần sử dụng nhiều hơn`);
+    }
+
+    if (error.message?.includes("API_KEY_INVALID") || error.message?.includes("401") || error.status === 401) {
+      throw new Error("API key không hợp lệ. Vui lòng kiểm tra cấu hình GEMINI_API_KEY.");
+    }
+
+    if (error.message?.includes("403") || error.status === 403) {
+      throw new Error("Không có quyền truy cập API. Vui lòng kiểm tra quyền của API key.");
+    }
+
+    // Return more detailed error message
+    const errorMessage = error.message || "Unknown error";
+    throw new Error(`Không thể lấy phản hồi: ${errorMessage.substring(0, 150)}... Vui lòng kiểm tra API key và quota.`);
+  }
 };
 
 export const chatWithAI = action({
