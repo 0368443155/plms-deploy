@@ -12,6 +12,7 @@ import { Doc, Id } from "@/convex/_generated/dataModel";
 const DAYS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 const DAYS_FULL = ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
 const HOURS = Array.from({ length: 15 }, (_, i) => i + 7); // 7:00 - 21:00
+const HOUR_HEIGHT = 80; // Height of each hour slot in pixels
 
 export const ScheduleGrid = () => {
   const schedules = useQuery(api.schedules.getAll);
@@ -38,22 +39,32 @@ export const ScheduleGrid = () => {
     setIsModalOpen(true);
   };
 
-  const getSchedulesForSlot = (dayOfWeek: number, hour: number): Doc<"schedules">[] => {
+  // Convert time string (HH:MM) to minutes from start of day
+  const timeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+
+  // Calculate position and height for a schedule
+  const getSchedulePosition = (schedule: Doc<"schedules">) => {
+    const startMinutes = timeToMinutes(schedule.startTime);
+    const endMinutes = timeToMinutes(schedule.endTime);
+    const duration = endMinutes - startMinutes;
+
+    // Calculate offset from 7:00 (start of grid)
+    const offsetFromStart = startMinutes - (7 * 60); // 7:00 = 420 minutes
+
+    // Calculate position and height
+    const top = (offsetFromStart / 60) * HOUR_HEIGHT; // pixels from top
+    const height = (duration / 60) * HOUR_HEIGHT; // height in pixels
+
+    return { top, height };
+  };
+
+  // Get schedules for a specific day
+  const getSchedulesForDay = (dayOfWeek: number): Doc<"schedules">[] => {
     if (!schedules) return [];
-
-    const slotStart = `${hour.toString().padStart(2, "0")}:00`;
-    const slotEnd = `${(hour + 1).toString().padStart(2, "0")}:00`;
-
-    return schedules.filter((schedule) => {
-      // Check if schedule is on the same day
-      if (schedule.dayOfWeek !== dayOfWeek) return false;
-
-      // Check if schedule overlaps with this hour slot
-      // Schedule overlaps if:
-      // - Schedule starts before slot ends (schedule.startTime < slotEnd)
-      // - AND schedule ends after slot starts (schedule.endTime > slotStart)
-      return schedule.startTime < slotEnd && schedule.endTime > slotStart;
-    });
+    return schedules.filter((schedule) => schedule.dayOfWeek === dayOfWeek);
   };
 
   const handleCloseModal = () => {
@@ -93,51 +104,74 @@ export const ScheduleGrid = () => {
       {/* Grid */}
       <div className="border rounded-lg overflow-hidden bg-background">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-muted/50">
-                <th className="border p-3 w-20 text-center font-semibold sticky left-0 bg-muted/50 z-10">
-                  Giờ
-                </th>
-                {DAYS.map((day, index) => (
-                  <th key={index} className="border p-3 text-center font-semibold min-w-[120px]">
-                    <div>{day}</div>
-                    <div className="text-xs text-muted-foreground font-normal">
-                      {DAYS_FULL[index]}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {HOURS.map((hour) => (
-                <tr key={hour} className="hover:bg-muted/30 transition-colors">
-                  <td className="border p-2 text-center font-medium sticky left-0 bg-background z-10">
-                    {hour}:00
-                  </td>
-                  {DAYS.map((_, dayIndex) => {
-                    const schedulesInSlot = getSchedulesForSlot(dayIndex, hour);
+          <div className="min-w-[900px]">
+            {/* Header */}
+            <div className="flex bg-muted/50 border-b">
+              <div className="w-20 border-r p-3 text-center font-semibold flex-shrink-0">
+                Giờ
+              </div>
+              {DAYS.map((day, index) => (
+                <div key={index} className="flex-1 border-r last:border-r-0 p-3 text-center font-semibold min-w-[120px]">
+                  <div>{day}</div>
+                  <div className="text-xs text-muted-foreground font-normal">
+                    {DAYS_FULL[index]}
+                  </div>
+                </div>
+              ))}
+            </div>
 
+            {/* Grid Body */}
+            <div className="flex">
+              {/* Time Column */}
+              <div className="w-20 border-r flex-shrink-0">
+                {HOURS.map((hour) => (
+                  <div
+                    key={hour}
+                    className="border-b p-2 text-center font-medium bg-background"
+                    style={{ height: `${HOUR_HEIGHT}px` }}
+                  >
+                    {hour}:00
+                  </div>
+                ))}
+              </div>
+
+              {/* Days Columns */}
+              {DAYS.map((_, dayIndex) => (
+                <div key={dayIndex} className="flex-1 border-r last:border-r-0 relative min-w-[120px]">
+                  {/* Hour slots (for clicking) */}
+                  {HOURS.map((hour) => (
+                    <div
+                      key={hour}
+                      className="border-b cursor-pointer hover:bg-muted/50 transition-colors"
+                      style={{ height: `${HOUR_HEIGHT}px` }}
+                      onClick={() => handleSlotClick(dayIndex, hour)}
+                    />
+                  ))}
+
+                  {/* Schedules (absolute positioned) */}
+                  {getSchedulesForDay(dayIndex).map((schedule) => {
+                    const { top, height } = getSchedulePosition(schedule);
                     return (
-                      <td
-                        key={dayIndex}
-                        className="border p-1 cursor-pointer hover:bg-muted/50 relative min-h-[80px] align-top"
-                        onClick={() => handleSlotClick(dayIndex, hour)}
+                      <div
+                        key={schedule._id}
+                        className="absolute left-1 right-1"
+                        style={{
+                          top: `${top}px`,
+                          height: `${height}px`,
+                          zIndex: 10,
+                        }}
                       >
-                        {schedulesInSlot.map((schedule) => (
-                          <ScheduleItem
-                            key={schedule._id}
-                            schedule={schedule}
-                            onClick={(e) => handleScheduleClick(schedule._id, e)}
-                          />
-                        ))}
-                      </td>
+                        <ScheduleItem
+                          schedule={schedule}
+                          onClick={(e) => handleScheduleClick(schedule._id, e)}
+                        />
+                      </div>
                     );
                   })}
-                </tr>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -151,4 +185,3 @@ export const ScheduleGrid = () => {
     </div>
   );
 };
-

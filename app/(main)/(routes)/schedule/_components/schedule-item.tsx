@@ -9,37 +9,60 @@ interface ScheduleItemProps {
 }
 
 export const ScheduleItem = ({ schedule, onClick }: ScheduleItemProps) => {
-  const startHour = parseInt(schedule.startTime.split(":")[0]);
-  const startMinute = parseInt(schedule.startTime.split(":")[1]);
-  const endHour = parseInt(schedule.endTime.split(":")[0]);
-  const endMinute = parseInt(schedule.endTime.split(":")[1]);
-
-  const duration = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
-  const height = Math.max(40, (duration / 60) * 80); // 80px per hour
+  // Create tooltip text
+  const tooltipText = `${schedule.subjectName}\n${schedule.startTime} - ${schedule.endTime}${schedule.room ? `\n📍 ${schedule.room}` : ''}${schedule.teacher ? `\n👤 ${schedule.teacher}` : ''}`;
 
   return (
     <div
       className={cn(
-        "text-xs p-2 rounded mb-1 cursor-pointer hover:opacity-90 transition-all",
-        "text-white shadow-sm border border-white/20"
+        "text-xs p-2 rounded cursor-pointer hover:opacity-90 transition-all h-full",
+        "text-white shadow-sm border border-white/20",
+        "overflow-hidden" // Force overflow hidden
       )}
       style={{
         backgroundColor: schedule.color || "#3B82F6",
-        minHeight: `${height}px`,
       }}
       onClick={onClick}
+      title={tooltipText}
     >
-      <div className="font-semibold truncate mb-1">{schedule.subjectName}</div>
+      <div
+        className="font-semibold mb-1"
+        style={{
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          maxWidth: "100%",
+        }}
+      >
+        {schedule.subjectName}
+      </div>
       <div className="text-[10px] opacity-90 mb-1">
         {schedule.startTime} - {schedule.endTime}
       </div>
       {schedule.room && (
-        <div className="text-[10px] opacity-90">📍 {schedule.room}</div>
+        <div
+          className="text-[10px] opacity-90"
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          📍 {schedule.room}
+        </div>
       )}
       {schedule.teacher && (
-        <div className="text-[10px] opacity-90">👤 {schedule.teacher}</div>
+        <div
+          className="text-[10px] opacity-90"
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          👤 {schedule.teacher}
+        </div>
       )}
     </div>
   );
 };
-

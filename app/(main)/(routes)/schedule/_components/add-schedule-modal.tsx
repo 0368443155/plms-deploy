@@ -103,6 +103,11 @@ export const AddScheduleModal = ({
       return;
     }
 
+    if (subjectName.length > 100) {
+      toast.error("Tên môn học không được vượt quá 100 ký tự");
+      return;
+    }
+
     if (startTime >= endTime) {
       toast.error("Thời gian kết thúc phải sau thời gian bắt đầu");
       return;
@@ -173,8 +178,14 @@ export const AddScheduleModal = ({
               value={subjectName}
               onChange={(e) => setSubjectName(e.target.value)}
               placeholder="Ví dụ: Toán cao cấp"
+              maxLength={100}
               required
             />
+            {subjectName.length > 80 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {subjectName.length}/100 ký tự
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -218,24 +229,42 @@ export const AddScheduleModal = ({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="startTime">Giờ bắt đầu *</Label>
-              <Input
-                id="startTime"
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                required
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  required
+                  className="flex-1"
+                />
+                <span className="text-sm text-muted-foreground min-w-[40px]">
+                  {(() => {
+                    const [hours] = startTime.split(':').map(Number);
+                    return hours >= 12 ? 'PM' : 'AM';
+                  })()}
+                </span>
+              </div>
             </div>
 
             <div>
               <Label htmlFor="endTime">Giờ kết thúc *</Label>
-              <Input
-                id="endTime"
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                required
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  required
+                  className="flex-1"
+                />
+                <span className="text-sm text-muted-foreground min-w-[40px]">
+                  {(() => {
+                    const [hours] = endTime.split(':').map(Number);
+                    return hours >= 12 ? 'PM' : 'AM';
+                  })()}
+                </span>
+              </div>
             </div>
           </div>
 
