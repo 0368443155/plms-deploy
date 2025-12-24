@@ -216,13 +216,15 @@ export const create = internalMutation({
 
 function formatDate(timestamp: number): string {
   const date = new Date(timestamp);
-  return date.toLocaleDateString("vi-VN", {
+  // Force Vietnam timezone (GMT+7)
+  return date.toLocaleString("vi-VN", {
     weekday: "long",
     year: "numeric",
     month: "numeric",
     day: "numeric",
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
+    timeZone: "Asia/Ho_Chi_Minh"  // Force Vietnam timezone
   });
 }
 

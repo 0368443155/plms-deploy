@@ -3,12 +3,11 @@
  * Export documents to PDF, Markdown, and Plain Text
  */
 
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 import TurndownService from "turndown";
 
 /**
- * Export document to PDF
+ * Export document to PDF using browser's native print
+ * This approach handles page breaks perfectly
  * @param element - HTML element containing the document content
  * @param filename - Name of the PDF file (without .pdf extension)
  */
@@ -17,76 +16,168 @@ export const exportToPDF = async (
   filename: string = "document"
 ): Promise<void> => {
   try {
-    // Clone the element to avoid modifying the original
+    // Clone the element
     const clonedElement = element.cloneNode(true) as HTMLElement;
 
     // Hide elements that shouldn't be in PDF
     const elementsToHide = [
-      'button',  // All buttons
-      '[role="button"]',  // Button-like elements
-      '.no-print',  // Elements with no-print class
-      '[data-no-print]',  // Elements with data-no-print attribute
-      '.bn-block-outer[data-node-type="paragraph"]:has(.bn-inline-content:empty)',  // Empty paragraphs with placeholders
+      'button',
+      '[role="button"]',
+      '.no-print',
+      '[data-no-print]',
+      '.bn-side-menu',
+      '.bn-drag-handle',
+      '.bn-formatting-toolbar',
+      '.bn-slash-menu',
+      '.bn-suggestion-menu',
+      '[data-test-id]',
+      'img[src=""]',
+      'img:not([src])',
     ];
 
     elementsToHide.forEach(selector => {
-      const elements = clonedElement.querySelectorAll(selector);
-      elements.forEach(el => {
-        (el as HTMLElement).style.display = 'none';
-      });
+      try {
+        const elements = clonedElement.querySelectorAll(selector);
+        elements.forEach(el => {
+          (el as HTMLElement).remove(); // Remove instead of hide
+        });
+      } catch (e) {
+        // Ignore selector errors
+      }
     });
 
-    // Also hide placeholder text specifically
+    // Remove placeholders
     const placeholders = clonedElement.querySelectorAll('[data-placeholder], .placeholder');
     placeholders.forEach(el => {
-      (el as HTMLElement).style.display = 'none';
+      (el as HTMLElement).remove();
     });
 
-    // Append cloned element temporarily to document (needed for html2canvas)
-    clonedElement.style.position = 'absolute';
-    clonedElement.style.left = '-9999px';
-    clonedElement.style.top = '0';
-    clonedElement.style.padding = '20px';  // Add padding to prevent clipping
-    clonedElement.style.overflow = 'visible';  // Ensure content is not clipped
-    document.body.appendChild(clonedElement);
+    // Create a temporary container for print
+    const printContainer = document.createElement('div');
+    printContainer.id = 'print-container';
+    printContainer.appendChild(clonedElement);
 
-    // Convert HTML to canvas
-    const canvas = await html2canvas(clonedElement, {
-      scale: 2, // Higher quality
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff',  // White background
-      windowHeight: clonedElement.scrollHeight + 100,  // Add extra height to prevent clipping
-      allowTaint: true,  // Allow cross-origin images
-    });
+    // Add print-specific styles
+    const printStyles = document.createElement('style');
+    printStyles.id = 'print-styles';
+    printStyles.textContent = `
+      @media print {
+        /* Hide everything except print container */
+        body > *:not(#print-container) {
+          display: none !important;
+        }
+        
+        /* Show only print container */
+        #print-container {
+          display: block !important;
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          margin: 0;
+          padding: 20mm;
+          background: white;
+          color: black;
+        }
+        
+        /* Page setup */
+        @page {
+          size: A4;
+          margin: 10mm;
+        }
+        
+        /* Prevent page breaks inside small elements only */
+        p, li, blockquote, pre {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+        
+        /* Headings: avoid break after (keep with next content) but allow break before */
+        h1, h2, h3, h4, h5, h6 {
+          page-break-after: avoid !important;
+          break-after: avoid !important;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+        
+        /* List handling - avoid breaking lists but allow breaking between items if needed */
+        ul, ol {
+          page-break-before: auto;
+          page-break-after: auto;
+        }
+        
+        li {
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+        
+        /* Orphans and widows */
+        p, li {
+          orphans: 2;
+          widows: 2;
+        }
+        
+        /* Font sizes */
+        body, #print-container {
+          font-family: Arial, sans-serif;
+          font-size: 12pt;
+          line-height: 1.5;
+        }
+        
+        h1 { font-size: 24pt; margin: 12pt 0 6pt 0; }
+        h2 { font-size: 20pt; margin: 12pt 0 6pt 0; }
+        h3 { font-size: 16pt; margin: 12pt 0 6pt 0; }
+        h4 { font-size: 14pt; margin: 12pt 0 6pt 0; }
+        h5 { font-size: 12pt; margin: 12pt 0 6pt 0; }
+        h6 { font-size: 11pt; margin: 12pt 0 6pt 0; }
+        
+        p { margin: 6pt 0; }
+        
+        ul, ol { margin: 8pt 0; }
+        li { margin: 4pt 0; }
+        
+        blockquote, pre {
+          page-break-inside: avoid !important;
+          margin: 8pt 0;
+          padding: 8pt;
+        }
+        
+        /* Images */
+        img {
+          max-width: 100%;
+          page-break-inside: avoid !important;
+        }
+        
+        /* Tables */
+        table {
+          page-break-inside: auto;
+          width: 100%;
+        }
+        
+        tr {
+          page-break-inside: avoid !important;
+        }
+      }
+    `;
 
-    // Remove cloned element
-    document.body.removeChild(clonedElement);
+    // Append to body
+    document.body.appendChild(printStyles);
+    document.body.appendChild(printContainer);
 
-    const imgData = canvas.toDataURL("image/png");
-    const pdf = new jsPDF("p", "mm", "a4"); // A4 size, portrait
+    // Set document title for PDF filename
+    const originalTitle = document.title;
+    document.title = filename;
 
-    const imgWidth = 210; // A4 width in mm
-    const pageHeight = 295; // A4 height in mm
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
+    // Trigger print dialog
+    window.print();
 
-    let position = 0;
+    // Cleanup after print (wait a bit for print dialog)
+    setTimeout(() => {
+      document.body.removeChild(printContainer);
+      document.body.removeChild(printStyles);
+      document.title = originalTitle;
+    }, 1000);
 
-    // Add first page
-    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-
-    // Add additional pages if needed
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-    }
-
-    // Save PDF
-    pdf.save(`${filename}.pdf`);
   } catch (error) {
     console.error("PDF export error:", error);
     throw new Error("Failed to export PDF");

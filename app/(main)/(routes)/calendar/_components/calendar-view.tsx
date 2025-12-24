@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { useState, useMemo } from "react";
 import { EventModal } from "./event-modal";
 import "react-big-calendar/lib/css/react-big-calendar.css";
+import "./calendar-custom.css";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 

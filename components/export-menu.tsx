@@ -26,15 +26,18 @@ export const ExportMenu = ({
     try {
       const element = document.getElementById(contentElementId);
       if (!element) {
-        // Fallback: try to find editor content
-        const editorElement =
-          document.querySelector(".bn-container") ||
-          document.querySelector('[data-blocknote-editor]');
-        if (!editorElement) {
+        // Fallback: try to find ONLY the editor content area (not the whole container)
+        // .ProseMirror contains the actual content without UI elements
+        const editorContent =
+          document.querySelector(".ProseMirror") ||
+          document.querySelector(".bn-editor") ||
+          document.querySelector(".bn-container");
+
+        if (!editorContent) {
           toast.error("Không tìm thấy nội dung để export");
           return;
         }
-        await exportToPDF(editorElement as HTMLElement, documentTitle);
+        await exportToPDF(editorContent as HTMLElement, documentTitle);
       } else {
         await exportToPDF(element, documentTitle);
       }
@@ -51,7 +54,7 @@ export const ExportMenu = ({
       const editorElement =
         document.querySelector(".bn-container") ||
         document.querySelector('[data-blocknote-editor]');
-      
+
       if (!editorElement) {
         toast.error("Không tìm thấy nội dung để export");
         return;
@@ -71,7 +74,7 @@ export const ExportMenu = ({
       const editorElement =
         document.querySelector(".bn-container") ||
         document.querySelector('[data-blocknote-editor]');
-      
+
       if (!editorElement) {
         toast.error("Không tìm thấy nội dung để copy");
         return;

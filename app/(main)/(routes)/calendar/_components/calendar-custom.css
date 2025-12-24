@@ -1,0 +1,61 @@
+/* Custom styles for react-big-calendar */
+
+/* Fix for agenda view - add spacing between events */
+.rbc-agenda-view .rbc-agenda-table tbody > tr {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.rbc-agenda-view .rbc-agenda-table tbody > tr > td {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* Add margin between event blocks in agenda view */
+.rbc-agenda-view .rbc-agenda-event-cell {
+  padding: 6px 0;
+}
+
+/* Ensure event content doesn't overflow */
+.rbc-agenda-view .rbc-event-content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.4;
+  padding: 2px 0;
+}
+
+/* Add subtle separator between consecutive events on same day */
+.rbc-agenda-view .rbc-agenda-table tbody > tr + tr {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Prevent event blocks from overflowing their container */
+.rbc-agenda-view .rbc-event {
+  padding: 4px 8px;
+  margin: 2px 0;
+  border-radius: 4px;
+  box-sizing: border-box;
+  display: block;
+  overflow: hidden;
+}
+
+/* Add spacing for date cells */
+.rbc-agenda-view .rbc-agenda-date-cell {
+  padding: 8px 12px;
+  vertical-align: top;
+}
+
+/* Add spacing for time cells */
+.rbc-agenda-view .rbc-agenda-time-cell {
+  padding: 8px 12px;
+  vertical-align: top;
+}
+
+/* Ensure proper spacing in dark mode */
+.dark .rbc-agenda-view .rbc-agenda-table tbody > tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark .rbc-agenda-view .rbc-agenda-table tbody > tr + tr {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}

@@ -229,16 +229,16 @@ export const AddScheduleModal = ({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="startTime">Giờ bắt đầu *</Label>
-              <div className="flex items-center gap-2">
+              <div className="relative">
                 <Input
                   id="startTime"
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
                   required
-                  className="flex-1"
+                  className="pr-12"
                 />
-                <span className="text-sm text-muted-foreground min-w-[40px]">
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
                   {(() => {
                     const [hours] = startTime.split(':').map(Number);
                     return hours >= 12 ? 'PM' : 'AM';
@@ -249,16 +249,16 @@ export const AddScheduleModal = ({
 
             <div>
               <Label htmlFor="endTime">Giờ kết thúc *</Label>
-              <div className="flex items-center gap-2">
+              <div className="relative">
                 <Input
                   id="endTime"
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
                   required
-                  className="flex-1"
+                  className="pr-12"
                 />
-                <span className="text-sm text-muted-foreground min-w-[40px]">
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
                   {(() => {
                     const [hours] = endTime.split(':').map(Number);
                     return hours >= 12 ? 'PM' : 'AM';

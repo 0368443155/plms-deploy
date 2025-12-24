@@ -88,7 +88,7 @@ export const Notifications = () => {
 
   if (notifications === undefined || unreadCount === undefined) {
     return (
-      <Button variant="ghost" size="icon" className="relative">
+      <Button variant="ghost" size="icon" className="relative mr-2">
         <Bell className="h-5 w-5" />
       </Button>
     );
@@ -97,7 +97,7 @@ export const Notifications = () => {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative mr-2 z-10">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <Badge
