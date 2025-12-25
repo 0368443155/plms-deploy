@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
+import { useNavbarActions } from "@/hooks/use-navbar-actions";
 
 interface TableEditorProps {
   tableId: Id<"tables">;
@@ -53,6 +54,7 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
   const deleteTable = useMutation(api.tables.remove);
   const updateColumnConfig = useMutation(api.tables.updateColumnConfig);
   const router = useRouter();
+  const { setNavbarContent, clearNavbarContent } = useNavbarActions();
 
   const [editingCell, setEditingCell] = useState<{
     rowId: Id<"tableRows">;
@@ -113,6 +115,48 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
       }
     };
   }, []);
+
+  // Set navbar content when table data loads
+  useEffect(() => {
+    if (tableData) {
+      const { table } = tableData;
+      setNavbarContent(
+        table.title,
+        table.description || undefined,
+        <>
+          <Button variant="outline" size="sm" onClick={handleAddRow}>
+            <Plus className="h-4 w-4 mr-2" />
+            Thêm hàng
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsAddColumnModalOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Thêm cột
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleDeleteTable}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Xóa bảng
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </>
+      );
+    }
+
+    return () => {
+      clearNavbarContent();
+    };
+  }, [tableData, setNavbarContent, clearNavbarContent]);
 
   const handleCellClick = (
     rowId: Id<"tableRows">,
@@ -245,44 +289,7 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
 
   return (
     <div className="w-full h-full flex flex-col">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">{table.title}</h1>
-          {table.description && (
-            <p className="text-muted-foreground mt-1">{table.description}</p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleAddRow}>
-            <Plus className="h-4 w-4 mr-2" />
-            Thêm hàng
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsAddColumnModalOpen(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Thêm cột
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleDeleteTable}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Xóa bảng
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      {/* Table */}
+      {/* Table - Removed toolbar, now in navbar */}
       <div className="flex-1 overflow-auto border rounded-lg">
         <table className="w-full border-collapse min-w-full" style={{ tableLayout: "fixed" }}>
           <thead className="bg-muted/50 sticky top-0 z-10">
@@ -409,10 +416,18 @@ export const TableEditor = ({ tableId }: TableEditorProps) => {
                                     setSelectInputValue(""); // Clear input when selecting from dropdown
                                     // Save immediately when selecting from dropdown
                                     debouncedUpdateCell(row._id, column._id, selectedValue);
-                                    setEditingCell(null);
+                                    // Close the cell
+                                    setTimeout(() => {
+                                      setEditingCell(null);
+                                      setEditingValue("");
+                                    }, 100);
                                   }
                                 }}
-                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 max-h-40 overflow-y-auto"
+                                onClick={(e) => {
+                                  // Prevent cell click handler from firing
+                                  e.stopPropagation();
+                                }}
+                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 max-h-40 overflow-y-auto cursor-pointer"
                               >
                                 <option value="">-- Chọn từ danh sách --</option>
                                 {(() => {

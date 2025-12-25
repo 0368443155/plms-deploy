@@ -10,178 +10,212 @@ import TurndownService from "turndown";
  * This approach handles page breaks perfectly
  * @param element - HTML element containing the document content
  * @param filename - Name of the PDF file (without .pdf extension)
+ * @returns Promise that resolves when print is successful or rejects when cancelled
  */
 export const exportToPDF = async (
   element: HTMLElement,
   filename: string = "document"
 ): Promise<void> => {
-  try {
-    // Clone the element
-    const clonedElement = element.cloneNode(true) as HTMLElement;
+  return new Promise((resolve, reject) => {
+    try {
+      // Clone the element
+      const clonedElement = element.cloneNode(true) as HTMLElement;
 
-    // Hide elements that shouldn't be in PDF
-    const elementsToHide = [
-      'button',
-      '[role="button"]',
-      '.no-print',
-      '[data-no-print]',
-      '.bn-side-menu',
-      '.bn-drag-handle',
-      '.bn-formatting-toolbar',
-      '.bn-slash-menu',
-      '.bn-suggestion-menu',
-      '[data-test-id]',
-      'img[src=""]',
-      'img:not([src])',
-    ];
+      // Hide elements that shouldn't be in PDF
+      const elementsToHide = [
+        'button',
+        '[role="button"]',
+        '.no-print',
+        '[data-no-print]',
+        '.bn-side-menu',
+        '.bn-drag-handle',
+        '.bn-formatting-toolbar',
+        '.bn-slash-menu',
+        '.bn-suggestion-menu',
+        '[data-test-id]',
+        'img[src=""]',
+        'img:not([src])',
+      ];
 
-    elementsToHide.forEach(selector => {
-      try {
-        const elements = clonedElement.querySelectorAll(selector);
-        elements.forEach(el => {
-          (el as HTMLElement).remove(); // Remove instead of hide
-        });
-      } catch (e) {
-        // Ignore selector errors
-      }
-    });
+      elementsToHide.forEach(selector => {
+        try {
+          const elements = clonedElement.querySelectorAll(selector);
+          elements.forEach(el => {
+            (el as HTMLElement).remove(); // Remove instead of hide
+          });
+        } catch (e) {
+          // Ignore selector errors
+        }
+      });
 
-    // Remove placeholders
-    const placeholders = clonedElement.querySelectorAll('[data-placeholder], .placeholder');
-    placeholders.forEach(el => {
-      (el as HTMLElement).remove();
-    });
+      // Remove placeholders
+      const placeholders = clonedElement.querySelectorAll('[data-placeholder], .placeholder');
+      placeholders.forEach(el => {
+        (el as HTMLElement).remove();
+      });
 
-    // Create a temporary container for print
-    const printContainer = document.createElement('div');
-    printContainer.id = 'print-container';
-    printContainer.appendChild(clonedElement);
+      // Create a temporary container for print
+      const printContainer = document.createElement('div');
+      printContainer.id = 'print-container';
+      printContainer.appendChild(clonedElement);
 
-    // Add print-specific styles
-    const printStyles = document.createElement('style');
-    printStyles.id = 'print-styles';
-    printStyles.textContent = `
-      @media print {
-        /* Hide everything except print container */
-        body > *:not(#print-container) {
-          display: none !important;
+      // Add print-specific styles
+      const printStyles = document.createElement('style');
+      printStyles.id = 'print-styles';
+      printStyles.textContent = `
+        @media print {
+          /* Hide everything except print container */
+          body > *:not(#print-container) {
+            display: none !important;
+          }
+          
+          /* Show only print container */
+          #print-container {
+            display: block !important;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            margin: 0;
+            padding: 20mm;
+            background: white;
+            color: black;
+          }
+          
+          /* Page setup */
+          @page {
+            size: A4;
+            margin: 10mm;
+          }
+          
+          /* Prevent page breaks inside small elements only */
+          p, li, blockquote, pre {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          
+          /* Headings: avoid break after (keep with next content) but allow break before */
+          h1, h2, h3, h4, h5, h6 {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          
+          /* List handling - avoid breaking lists but allow breaking between items if needed */
+          ul, ol {
+            page-break-before: auto;
+            page-break-after: auto;
+          }
+          
+          li {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          
+          /* Orphans and widows */
+          p, li {
+            orphans: 2;
+            widows: 2;
+          }
+          
+          /* Font sizes */
+          body, #print-container {
+            font-family: Arial, sans-serif;
+            font-size: 12pt;
+            line-height: 1.5;
+          }
+          
+          h1 { font-size: 24pt; margin: 12pt 0 6pt 0; }
+          h2 { font-size: 20pt; margin: 12pt 0 6pt 0; }
+          h3 { font-size: 16pt; margin: 12pt 0 6pt 0; }
+          h4 { font-size: 14pt; margin: 12pt 0 6pt 0; }
+          h5 { font-size: 12pt; margin: 12pt 0 6pt 0; }
+          h6 { font-size: 11pt; margin: 12pt 0 6pt 0; }
+          
+          p { margin: 6pt 0; }
+          
+          ul, ol { margin: 8pt 0; }
+          li { margin: 4pt 0; }
+          
+          blockquote, pre {
+            page-break-inside: avoid !important;
+            margin: 8pt 0;
+            padding: 8pt;
+          }
+          
+          /* Images */
+          img {
+            max-width: 100%;
+            page-break-inside: avoid !important;
+          }
+          
+          /* Tables */
+          table {
+            page-break-inside: auto;
+            width: 100%;
+          }
+          
+          tr {
+            page-break-inside: avoid !important;
+          }
         }
-        
-        /* Show only print container */
-        #print-container {
-          display: block !important;
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          margin: 0;
-          padding: 20mm;
-          background: white;
-          color: black;
-        }
-        
-        /* Page setup */
-        @page {
-          size: A4;
-          margin: 10mm;
-        }
-        
-        /* Prevent page breaks inside small elements only */
-        p, li, blockquote, pre {
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
-        }
-        
-        /* Headings: avoid break after (keep with next content) but allow break before */
-        h1, h2, h3, h4, h5, h6 {
-          page-break-after: avoid !important;
-          break-after: avoid !important;
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
-        }
-        
-        /* List handling - avoid breaking lists but allow breaking between items if needed */
-        ul, ol {
-          page-break-before: auto;
-          page-break-after: auto;
-        }
-        
-        li {
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
-        }
-        
-        /* Orphans and widows */
-        p, li {
-          orphans: 2;
-          widows: 2;
-        }
-        
-        /* Font sizes */
-        body, #print-container {
-          font-family: Arial, sans-serif;
-          font-size: 12pt;
-          line-height: 1.5;
-        }
-        
-        h1 { font-size: 24pt; margin: 12pt 0 6pt 0; }
-        h2 { font-size: 20pt; margin: 12pt 0 6pt 0; }
-        h3 { font-size: 16pt; margin: 12pt 0 6pt 0; }
-        h4 { font-size: 14pt; margin: 12pt 0 6pt 0; }
-        h5 { font-size: 12pt; margin: 12pt 0 6pt 0; }
-        h6 { font-size: 11pt; margin: 12pt 0 6pt 0; }
-        
-        p { margin: 6pt 0; }
-        
-        ul, ol { margin: 8pt 0; }
-        li { margin: 4pt 0; }
-        
-        blockquote, pre {
-          page-break-inside: avoid !important;
-          margin: 8pt 0;
-          padding: 8pt;
-        }
-        
-        /* Images */
-        img {
-          max-width: 100%;
-          page-break-inside: avoid !important;
-        }
-        
-        /* Tables */
-        table {
-          page-break-inside: auto;
-          width: 100%;
-        }
-        
-        tr {
-          page-break-inside: avoid !important;
-        }
-      }
-    `;
+      `;
 
-    // Append to body
-    document.body.appendChild(printStyles);
-    document.body.appendChild(printContainer);
+      // Append to body
+      document.body.appendChild(printStyles);
+      document.body.appendChild(printContainer);
 
-    // Set document title for PDF filename
-    const originalTitle = document.title;
-    document.title = filename;
+      // Set document title for PDF filename
+      const originalTitle = document.title;
+      document.title = filename;
 
-    // Trigger print dialog
-    window.print();
+      // Track if print was executed
+      let printExecuted = false;
 
-    // Cleanup after print (wait a bit for print dialog)
-    setTimeout(() => {
-      document.body.removeChild(printContainer);
-      document.body.removeChild(printStyles);
-      document.title = originalTitle;
-    }, 1000);
+      // Cleanup function
+      const cleanup = () => {
+        try {
+          if (document.body.contains(printContainer)) {
+            document.body.removeChild(printContainer);
+          }
+          if (document.body.contains(printStyles)) {
+            document.body.removeChild(printStyles);
+          }
+          document.title = originalTitle;
+          window.removeEventListener('afterprint', handleAfterPrint);
+        } catch (e) {
+          console.error('Cleanup error:', e);
+        }
+      };
 
-  } catch (error) {
-    console.error("PDF export error:", error);
-    throw new Error("Failed to export PDF");
-  }
+      // Handle after print event
+      const handleAfterPrint = () => {
+        printExecuted = true;
+        cleanup();
+        resolve();
+      };
+
+      // Listen for afterprint event
+      window.addEventListener('afterprint', handleAfterPrint, { once: true });
+
+      // Trigger print dialog
+      window.print();
+
+      // If user cancels immediately (closes dialog without printing)
+      // afterprint won't fire, so we need a timeout to detect cancel
+      setTimeout(() => {
+        if (!printExecuted) {
+          cleanup();
+          reject(new Error('Print cancelled'));
+        }
+      }, 100);
+
+    } catch (error) {
+      console.error("PDF export error:", error);
+      reject(new Error("Failed to export PDF"));
+    }
+  });
 };
 
 /**

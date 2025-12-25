@@ -5,12 +5,13 @@ import { format, parse, startOfWeek, getDay, endOfWeek, startOfMonth, endOfMonth
 import { vi } from "date-fns/locale";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { EventModal } from "./event-modal";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "./calendar-custom.css";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { useNavbarActions } from "@/hooks/use-navbar-actions";
 
 const locales = {
   vi: vi,
@@ -30,6 +31,7 @@ export const CalendarView = () => {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [selectedSlot, setSelectedSlot] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { setNavbarContent, clearNavbarContent } = useNavbarActions();
 
   // Calculate date range for current view
   const dateRange = useMemo(() => {
@@ -135,72 +137,76 @@ export const CalendarView = () => {
     setSelectedSlot(null);
   };
 
-  return (
-    <div className="h-full flex flex-col">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-3xl font-bold">Lịch tổng quan</h1>
-          <p className="text-muted-foreground mt-1">
-            Xem lịch học và sự kiện của bạn
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+  // Set navbar content
+  useEffect(() => {
+    setNavbarContent(
+      "Lịch tổng quan",
+      "Xem lịch học và sự kiện của bạn",
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate("today")}
+        >
+          Hôm nay
+        </Button>
+        <div className="flex items-center gap-1">
           <Button
             variant="outline"
-            size="sm"
-            onClick={() => navigate("today")}
+            size="icon"
+            onClick={() => navigate("prev")}
           >
-            Hôm nay
+            <ChevronLeft className="h-4 w-4" />
           </Button>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => navigate("prev")}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => navigate("next")}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex items-center gap-1 border rounded-md">
-            <Button
-              variant={view === "month" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setView("month")}
-            >
-              Tháng
-            </Button>
-            <Button
-              variant={view === "week" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setView("week")}
-            >
-              Tuần
-            </Button>
-            <Button
-              variant={view === "day" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setView("day")}
-            >
-              Ngày
-            </Button>
-            <Button
-              variant={view === "agenda" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setView("agenda")}
-            >
-              Lịch trình
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate("next")}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="flex items-center gap-1 border rounded-md">
+          <Button
+            variant={view === "month" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setView("month")}
+          >
+            Tháng
+          </Button>
+          <Button
+            variant={view === "week" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setView("week")}
+          >
+            Tuần
+          </Button>
+          <Button
+            variant={view === "day" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setView("day")}
+          >
+            Ngày
+          </Button>
+          <Button
+            variant={view === "agenda" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setView("agenda")}
+          >
+            Lịch trình
+          </Button>
         </div>
       </div>
+    );
+
+    return () => {
+      clearNavbarContent();
+    };
+  }, [view, setNavbarContent, clearNavbarContent]);
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Removed toolbar - now in navbar */}
 
       {/* Calendar */}
       <div className="flex-1 border rounded-lg p-4 bg-background">

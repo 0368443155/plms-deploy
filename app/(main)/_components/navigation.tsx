@@ -30,11 +30,12 @@ import { TrashBox } from "./trash-box";
 import { useSearch } from "@/hooks/use-search";
 import { useSettings } from "@/hooks/use-settings";
 import { Navbar } from "./navbar";
+import { Notifications } from "./notifications";
+import { useNavbarActions } from "@/hooks/use-navbar-actions";
 import { TemplatePicker } from "@/components/template-picker";
 import { Template } from "@/lib/templates";
 import Link from "next/link";
 import Image from "next/image";
-import { Notifications } from "./notifications";
 import { Home } from "lucide-react";
 
 export const Navigation = () => {
@@ -45,6 +46,7 @@ export const Navigation = () => {
   const pathname = usePathname();
   const isMobile = useMediaQuery("(max-width: 768px)"); // mobile screen size break point
   const create = useMutation(api.documents.create);
+  const navbarActions = useNavbarActions();
 
   const isResizingRef = useRef(false);
   const sidebarRef = useRef<ElementRef<"aside">>(null);
@@ -275,7 +277,7 @@ export const Navigation = () => {
       <div
         ref={navbarRef}
         className={cn(
-          "absolute top-0 z-[99999] left-60 w-[calc(100%-240px)]",
+          "absolute top-0 z-[99999] left-60 w-[calc(100%-240px)] bg-muted/50 backdrop-blur-sm border-b",
           isResetting && "transition-all ease-in-out duration-300",
           isMobile && "left-0 w-full"
         )}
@@ -284,17 +286,29 @@ export const Navigation = () => {
           <Navbar isCollapsed={isCollapsed} onResetWidth={resetWidth} />
         ) : (
           <nav className="bg-transparent px-3 py-2 w-full flex items-center justify-between">
-            {/* If the sidebar is collapsed, show the menu icon to let the user reopen the sidebar */}
+            {/* Left side: Menu icon or Title */}
             {isCollapsed ? (
               <MenuIcon
                 onClick={resetWidth}
                 role="button"
-                className="h-6 w-6 text-muted-foreground"
+                className="h-6 w-6 text-muted-foreground cursor-pointer"
               />
+            ) : navbarActions.title ? (
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold">{navbarActions.title}</h1>
+                {navbarActions.description && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {navbarActions.description}
+                  </p>
+                )}
+              </div>
             ) : (
               <div /> // Spacer
             )}
+
+            {/* Right side: Page actions + Notifications */}
             <div className="flex items-center gap-x-2">
+              {navbarActions.actions}
               <Notifications />
             </div>
           </nav>

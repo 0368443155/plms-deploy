@@ -73,10 +73,11 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
     return redirect("/");
   }
 
+
   return (
     <div className={cn("h-full flex dark:bg-[#1F1F1F]", isStudyMode && "study-mode-layout")}>
       {!isStudyMode && <Navigation />}
-      <main className={cn("flex-1 h-full overflow-y-auto", isStudyMode && "w-full")}>
+      <main className={cn("flex-1 h-full overflow-y-auto pt-20", isStudyMode && "w-full")}>
         {!isStudyMode && <SearchCommand />}
         {children}
       </main>

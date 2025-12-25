@@ -24,9 +24,9 @@ export const ExportMenu = ({
 }: ExportMenuProps) => {
   const handleExportPDF = async () => {
     try {
-      const element = document.getElementById(contentElementId);
+      const element = document.getElementById("document-content");
       if (!element) {
-        // Fallback: try to find ONLY the editor content area (not the whole container)
+        // Fallback: try to find BlockNote editor
         // .ProseMirror contains the actual content without UI elements
         const editorContent =
           document.querySelector(".ProseMirror") ||
@@ -41,10 +41,11 @@ export const ExportMenu = ({
       } else {
         await exportToPDF(element, documentTitle);
       }
-      toast.success("Đã export PDF thành công!");
-    } catch (error) {
+      // No toast - browser will show its own print/save dialog feedback
+    } catch (error: any) {
       console.error("PDF export error:", error);
-      toast.error("Không thể export PDF");
+      // Silent for all cases - browser handles feedback
+      // Only log errors for debugging
     }
   };
 

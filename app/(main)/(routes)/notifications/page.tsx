@@ -5,12 +5,13 @@ import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { CheckCheck, Bell, MessageSquare, AlertCircle, Info, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { Doc } from "@/convex/_generated/dataModel";
 import { NotificationModal } from "@/components/modals/notification-modal";
+import { useNavbarActions } from "@/hooks/use-navbar-actions";
 
 const NotificationsPage = () => {
     const [filter, setFilter] = useState<"all" | "unread">("all");
@@ -18,19 +19,50 @@ const NotificationsPage = () => {
         limit: 50,
         unreadOnly: filter === "unread",
     });
+    const unreadCount = useQuery(api.notifications.getUnreadCount);
     const markAllAsRead = useMutation(api.notifications.markAllAsRead);
     const markAsRead = useMutation(api.notifications.markAsRead);
+    const { setNavbarContent, clearNavbarContent } = useNavbarActions();
 
     const [selectedNotification, setSelectedNotification] = useState<Doc<"notifications"> | null>(null);
 
     const handleMarkAllAsRead = async () => {
         try {
-            await markAllAsRead();
-            toast.success("Đã đánh dấu tất cả đã đọc");
+            const result = await markAllAsRead();
+            if (result && result.count > 0) {
+                toast.success(`Đã đánh dấu ${result.count} thông báo là đã đọc`);
+            } else {
+                toast.success("Không có thông báo chưa đọc");
+            }
         } catch (error) {
+            console.error("Mark all as read error:", error);
             toast.error("Không thể đánh dấu đã đọc");
         }
     };
+
+    const hasUnread = (unreadCount ?? 0) > 0;
+
+    // Set navbar content
+    useEffect(() => {
+        setNavbarContent(
+            "Thông báo",
+            undefined,
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={handleMarkAllAsRead}
+                disabled={!hasUnread}
+                className="cursor-pointer disabled:cursor-not-allowed"
+            >
+                <CheckCheck className="h-4 w-4 mr-2" />
+                Đánh dấu đã đọc
+            </Button>
+        );
+
+        return () => {
+            clearNavbarContent();
+        };
+    }, [hasUnread, setNavbarContent, clearNavbarContent]);
 
     const handleNotificationClick = (notification: Doc<"notifications">) => {
         setSelectedNotification(notification);
@@ -52,18 +84,7 @@ const NotificationsPage = () => {
     return (
         <div className="h-full flex flex-col">
             <div className="p-6 md:max-w-4xl mx-auto w-full h-full flex flex-col">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-3xl font-bold">Thông báo</h1>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleMarkAllAsRead}
-                    >
-                        <CheckCheck className="h-4 w-4 mr-2" />
-                        Đánh dấu đã đọc
-                    </Button>
-                </div>
+                {/* Removed header - now in navbar */}
 
                 {/* Filters */}
                 <div className="flex gap-2 mb-6 border-b pb-4">

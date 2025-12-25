@@ -2,12 +2,13 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ScheduleItem } from "./schedule-item";
 import { AddScheduleModal } from "./add-schedule-modal";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { Doc, Id } from "@/convex/_generated/dataModel";
+import { useNavbarActions } from "@/hooks/use-navbar-actions";
 import "./schedule-grid.css";
 
 const DAYS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
@@ -24,6 +25,27 @@ export const ScheduleGrid = () => {
   } | null>(null);
   const [editingSchedule, setEditingSchedule] = useState<Id<"schedules"> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { setNavbarContent, clearNavbarContent } = useNavbarActions();
+
+  // Set navbar content
+  useEffect(() => {
+    setNavbarContent(
+      "Lịch học hàng tuần",
+      "Quản lý thời khóa biểu của bạn",
+      <Button onClick={() => {
+        setSelectedSlot(null);
+        setEditingSchedule(null);
+        setIsModalOpen(true);
+      }}>
+        <Plus className="h-4 w-4 mr-2" />
+        Thêm lịch học
+      </Button>
+    );
+
+    return () => {
+      clearNavbarContent();
+    };
+  }, [setNavbarContent, clearNavbarContent]);
 
   // Calculate dynamic hour range based on schedules
   const getHourRange = () => {
@@ -118,23 +140,7 @@ export const ScheduleGrid = () => {
 
   return (
     <div className="w-full">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Lịch học hàng tuần</h1>
-          <p className="text-muted-foreground mt-1">
-            Quản lý thời khóa biểu của bạn
-          </p>
-        </div>
-        <Button onClick={() => {
-          setSelectedSlot(null);
-          setEditingSchedule(null);
-          setIsModalOpen(true);
-        }}>
-          <Plus className="h-4 w-4 mr-2" />
-          Thêm lịch học
-        </Button>
-      </div>
+      {/* Removed toolbar - now in navbar */}
 
       {/* Grid */}
       <div className="border rounded-lg overflow-hidden bg-background">

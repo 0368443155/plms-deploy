@@ -131,11 +131,17 @@ export const markAllAsRead = mutation({
       )
       .collect();
 
+    console.log(`Marking ${unreadNotifications.length} notifications as read for user ${userId}`);
+
     await Promise.all(
       unreadNotifications.map((notification) =>
         ctx.db.patch(notification._id, { isRead: true })
       )
     );
+
+    console.log(`Successfully marked ${unreadNotifications.length} notifications as read`);
+
+    return { count: unreadNotifications.length };
   },
 });
 
