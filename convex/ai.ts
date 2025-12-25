@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { action, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { internal, api } from "./_generated/api";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+
 import { Id } from "./_generated/dataModel";
 
 // ========================================
@@ -440,140 +440,32 @@ const summarizeDocumentHandler = async (
     }
   }
 
-  // Get Gemini API key
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY not configured");
-  }
-
-  // Call Gemini API
-  const genAI = new GoogleGenerativeAI(apiKey);
-
-  // Try different models in order of preference
-  // Free tier models first, then paid tier
-  // Note: Use simple model names - version numbers may not work
-  const modelsToTry = [
-    "gemini-1.5-flash",         // Free tier - most common ✅
-    "gemini-1.5-pro",           // Free tier - better quality ✅
-    "gemini-pro",               // Free tier - legacy model ✅
-    "gemini-1.0-pro",           // Free tier - legacy model ✅
-    "gemini-2.0-flash-exp",    // Free tier - experimental
-    "gemini-3-pro-preview",     // Preview (may require paid)
-    "gemini-3-pro",             // Latest 3.0 (may require paid)
-    "gemini-2.5-pro",           // Requires paid tier ❌
-  ];
-
-  const prompt = `Hãy tóm tắt TOÀN BỘ nội dung tài liệu sau một cách ngắn gọn và súc tích. 
-Nếu tài liệu có nhiều chương hoặc phần, hãy đảm bảo tóm tắt TẤT CẢ các phần, không chỉ phần đầu.
-
-${plainText}
-
-Tóm tắt toàn bộ tài liệu:`;
-
-  // Helper function to sleep
-  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  // Try each model until one works
   let summary: string | null = null;
-  let usedModel = modelsToTry[0];
-  let lastError: any = null;
-  let quotaExceededCount = 0;
+  let usedModel = "";
 
-  for (const modelName of modelsToTry) {
+  // 1. Try SambaNova first
+  const sambaNovaApiKey = process.env.SAMBANOVA_API_KEY;
+  if (sambaNovaApiKey) {
     try {
-      const testModel = genAI.getGenerativeModel({
-        model: modelName,
-        generationConfig: {
-          maxOutputTokens: 1000,  // Increase to prevent truncation
-          temperature: 0.7,
-        }
-      });
-      const result = await testModel.generateContent(prompt);
-      const response = await result.response;
-      summary = response.text();
-      usedModel = modelName;
-      break;
-    } catch (err: any) {
-      console.error(`Model ${modelName} failed:`, err.message);
-      lastError = err;
-
-      if (err.status === 404) {
-        // Model not found - Try next model
-        console.error(`Model ${modelName} not found, trying next model...`);
-        continue;
-      }
-
-      if (err.status === 429) {
-        // Quota exceeded - Try next model with retry logic
-        quotaExceededCount++;
-        console.error(`Model ${modelName} quota exceeded (${quotaExceededCount}/${modelsToTry.length}), trying next model...`);
-
-        // If this is not the last model, try next one
-        if (quotaExceededCount < modelsToTry.length) {
-          // Add small delay before trying next model
-          await sleep(500);
-          continue;
-        }
-        // If all models exceeded quota, try retry with delay on first model
-        if (quotaExceededCount === modelsToTry.length) {
-          console.error("All models exceeded quota. Retrying first model with delay...");
-          await sleep(2000); // Wait 2 seconds before retry
-          try {
-            const retryModel = genAI.getGenerativeModel({ model: modelsToTry[0] });
-            const retryResult = await retryModel.generateContent(prompt);
-            const retryResponse = await retryResult.response;
-            summary = retryResponse.text();
-            usedModel = modelsToTry[0];
-            break;
-          } catch (retryErr: any) {
-            // Retry also failed, continue to error handling
-            console.error("Retry also failed:", retryErr.message);
-          }
-        }
-        continue;
-      }
-
-      // Other errors, throw
-      throw err;
+      console.log("Using SambaNova for summary...");
+      summary = await summarizeWithSambaNova(plainText, sambaNovaApiKey);
+      usedModel = "sambanova/meta-llama-3.1-8b-instruct";
+    } catch (error: any) {
+      console.error("SambaNova summary failed:", error);
     }
+  } else {
+    console.log("SAMBANOVA_API_KEY not found, skipping...");
   }
 
+  // 2. Fallback to Hugging Face
   if (!summary) {
-    // Provide helpful error message
-    const errorMsg = lastError?.message || "Unknown error";
-    if (errorMsg.includes("404") || errorMsg.includes("not found")) {
-      throw new Error(`Không tìm thấy model Gemini nào khả dụng. Vui lòng kiểm tra API key và đảm bảo Generative AI API đã được bật. Đã thử các models: ${modelsToTry.join(", ")}`);
-    }
-    if (errorMsg.includes("429") || errorMsg.includes("quota")) {
-      // Try SambaNova first (has $5 free credit), then Hugging Face
-      const sambaNovaApiKey = process.env.SAMBANOVA_API_KEY;
-
-      if (sambaNovaApiKey) {
-        console.log("All Gemini models exceeded quota. Trying SambaNova fallback...");
-        try {
-          summary = await summarizeWithSambaNova(plainText, sambaNovaApiKey);
-          usedModel = "sambanova/meta-llama-3.1-8b-instruct";
-          console.log("Successfully used SambaNova fallback");
-        } catch (snError: any) {
-          console.error("SambaNova fallback failed:", snError);
-          // Continue to Hugging Face fallback
-        }
-      }
-
-      // If SambaNova failed or not configured, try Hugging Face
-      if (!summary) {
-        console.log("Trying Hugging Face fallback...");
-        try {
-          summary = await summarizeWithHuggingFace(plainText);
-          usedModel = "huggingface/facebook-bart-large-cnn";
-          console.log("Successfully used Hugging Face fallback");
-        } catch (hfError: any) {
-          console.error("Hugging Face fallback also failed:", hfError);
-          throw new Error(`⚠️ Tất cả các models Gemini đã vượt quá quota miễn phí.\n\n💡 Giải pháp:\n1. Đợi 1-2 phút và thử lại (quota có thể được reset)\n2. Kiểm tra quota tại: https://aistudio.google.com/app/apikey\n3. Nâng cấp lên gói trả phí nếu cần sử dụng nhiều hơn\n\nĐã thử ${modelsToTry.length} models: ${modelsToTry.slice(0, 3).join(", ")}...`);
-        }
-      }
-    } else {
-      throw new Error(`Tất cả các models đều thất bại. Lỗi cuối: ${errorMsg.substring(0, 150)}...`);
+    console.log("Trying Hugging Face fallback for summary...");
+    try {
+      summary = await summarizeWithHuggingFace(plainText);
+      usedModel = "huggingface/facebook-bart-large-cnn";
+    } catch (error: any) {
+      console.error("Hugging Face summary failed:", error);
+      throw new Error("Không thể tạo tóm tắt. Cả SambaNova và Hugging Face đều gặp lỗi. Vui lòng thử lại sau.");
     }
   }
 
@@ -593,34 +485,13 @@ Tóm tắt toàn bộ tài liệu:`;
       model: usedModel,
     };
   } catch (error: any) {
-    console.error("Gemini API error:", error);
-    console.error("Error details:", {
-      message: error.message,
-      status: error.status,
-      statusText: error.statusText,
-      code: error.code,
-    });
-
-    // Check for specific error types
-    if (error.message?.includes("quota") || error.message?.includes("429") || error.status === 429) {
-      // Check if it's a specific model quota issue
-      if (error.message?.includes("gemini-2.5-pro")) {
-        throw new Error("Model gemini-2.5-pro requires paid tier. Code will auto-fallback to free tier models.");
-      }
-      throw new Error("API quota exceeded. Please try again later or use a different model.");
-    }
-
-    if (error.message?.includes("API_KEY_INVALID") || error.message?.includes("401") || error.status === 401) {
-      throw new Error("Invalid API key. Please check your GEMINI_API_KEY configuration.");
-    }
-
-    if (error.message?.includes("403") || error.status === 403) {
-      throw new Error("API access forbidden. Please check your API key permissions.");
-    }
-
-    // Return more detailed error message
-    const errorMessage = error.message || "Unknown error";
-    throw new Error(`Failed to generate summary: ${errorMessage}. Please check your API key and quota.`);
+    console.error("Error caching summary:", error);
+    // Return result even if caching failed
+    return {
+      summary: summary!,
+      fromCache: false,
+      model: usedModel,
+    };
   }
 };
 
@@ -792,403 +663,66 @@ const chatWithAIHandler = async (
   // Extract document content as context
   const documentContext = extractPlainText(document.content);
 
-  // Get Gemini API key
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY not configured");
-  }
-
-  // Build conversation for Gemini
-  const genAI = new GoogleGenerativeAI(apiKey);
-
-  // Try different models in order of preference
-  // Free tier models first, then paid tier
-  // Note: Use simple model names without version numbers
-  const modelsToTry = [
-    "gemini-1.5-flash",         // Free tier - most common
-    "gemini-1.5-pro",           // Free tier - better quality
-    "gemini-pro",               // Free tier - legacy model
-    "gemini-1.0-pro",           // Free tier - legacy model
-    "gemini-2.0-flash-exp",    // Free tier - experimental
-    "gemini-3-pro-preview",     // Preview (may require paid)
-    "gemini-3-pro",             // Latest 3.0 (may require paid)
-    "gemini-2.5-pro",           // Requires paid tier
-  ];
-  let usedModel = modelsToTry[0];
-
-  // Helper function to sleep
-  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  // Try to create chat with available model
-  let chat: any = null;
-  let lastError: any = null;
-  let quotaExceededCount = 0;
-
-  // Check if document is empty or too short
-  const isDocumentEmpty = !documentContext || documentContext.trim().length < 50;
-
-  // Build strict system prompt
-  const systemPrompt = isDocumentEmpty
-    ? `BẠN LÀ TRỢ LÝ AI CHUYÊN TRẢ LỜI DỰA TRÊN TÀI LIỆU.
-
-⚠️ CẢNH BÁO: Tài liệu hiện tại TRỐNG hoặc không có nội dung.
-
-QUY TẮC BẮT BUỘC:
-1. BẠN PHẢI TỪ CHỐI trả lời MỌI câu hỏi
-2. Luôn trả lời: "Xin lỗi, tài liệu hiện tại không có nội dung. Vui lòng thêm nội dung vào tài liệu trước khi đặt câu hỏi."
-3. KHÔNG ĐƯỢC sử dụng kiến thức nền
-4. KHÔNG ĐƯỢC trả lời bất kỳ câu hỏi nào, kể cả câu hỏi chung
-
-Tài liệu: [TRỐNG]`
-    : `BẠN LÀ TRỢ LÝ AI CHUYÊN TRẢ LỜI DỰA TRÊN TÀI LIỆU.
-
-QUY TẮC BẮT BUỘC (STRICT CONTEXT):
-1. CHỈ trả lời dựa trên nội dung tài liệu bên dưới
-2. KHÔNG ĐƯỢC sử dụng kiến thức nền hoặc thông tin bên ngoài
-3. Nếu câu hỏi KHÔNG liên quan đến tài liệu → Trả lời: "Xin lỗi, tôi không tìm thấy thông tin này trong tài liệu của bạn."
-4. Nếu tài liệu KHÔNG chứa thông tin để trả lời → Trả lời: "Xin lỗi, tài liệu không có thông tin về vấn đề này."
-5. PHÁT HIỆN câu hỏi gài (chứa tiền đề sai) → Đính chính: "Câu hỏi có vẻ chứa thông tin không chính xác. Theo tài liệu..."
-6. KHÔNG ĐƯỢC bịa đặt, suy luận, hoặc thêm thông tin không có trong tài liệu
-7. Nếu không chắc chắn → Nói rõ: "Tài liệu không đề cập rõ ràng về điều này."
-
-NỘI DUNG TÀI LIỆU:
-${documentContext}
-
-Hãy trả lời các câu hỏi CHÍNH XÁC dựa trên nội dung trên.`;
-
-  for (const modelName of modelsToTry) {
-    try {
-      const testModel = genAI.getGenerativeModel({
-        model: modelName,
-        generationConfig: {
-          temperature: 0.3,  // Lower temperature to reduce hallucination
-          maxOutputTokens: 500,
-        }
-      });
-      chat = testModel.startChat({
-        history: [
-          {
-            role: "user",
-            parts: [
-              {
-                text: systemPrompt,
-              },
-            ],
-          },
-          {
-            role: "model",
-            parts: [
-              {
-                text: isDocumentEmpty
-                  ? "Tôi hiểu. Tài liệu hiện tại trống. Tôi sẽ từ chối trả lời mọi câu hỏi và yêu cầu người dùng thêm nội dung vào tài liệu trước."
-                  : "Tôi đã hiểu nội dung tài liệu và các quy tắc. Tôi sẽ CHỈ trả lời dựa trên nội dung tài liệu, KHÔNG sử dụng kiến thức nền, và từ chối trả lời nếu thông tin không có trong tài liệu.",
-              },
-            ],
-          },
-          ...history.map((msg: { role: string; content: string }) => ({
-            role: msg.role === "user" ? "user" : "model",
-            parts: [{ text: msg.content }],
-          })),
-        ],
-      });
-      usedModel = modelName;
-      break;
-    } catch (err: any) {
-      console.error(`Model ${modelName} failed:`, err.message);
-      lastError = err;
-
-      if (err.status === 404) {
-        // Model not found - Try next model
-        console.error(`Model ${modelName} not found, trying next model...`);
-        continue;
-      }
-
-      if (err.status === 429) {
-        // Quota exceeded - Try next model with retry logic
-        quotaExceededCount++;
-        console.error(`Model ${modelName} quota exceeded (${quotaExceededCount}/${modelsToTry.length}), trying next model...`);
-
-        // If this is not the last model, try next one
-        if (quotaExceededCount < modelsToTry.length) {
-          // Add small delay before trying next model
-          await sleep(500);
-          continue;
-        }
-        // If all models exceeded quota, try retry with delay on first model
-        if (quotaExceededCount === modelsToTry.length) {
-          console.error("All models exceeded quota. Retrying first model with delay...");
-          await sleep(2000); // Wait 2 seconds before retry
-          try {
-            const retryModel = genAI.getGenerativeModel({ model: modelsToTry[0] });
-            chat = retryModel.startChat({
-              history: [
-                {
-                  role: "user",
-                  parts: [
-                    {
-                      text: `Đây là nội dung tài liệu:\n\n${documentContext}\n\nHãy trả lời các câu hỏi dựa trên nội dung này.`,
-                    },
-                  ],
-                },
-                {
-                  role: "model",
-                  parts: [
-                    {
-                      text: "Tôi đã hiểu nội dung tài liệu. Bạn có thể hỏi tôi bất kỳ câu hỏi nào về nội dung này.",
-                    },
-                  ],
-                },
-                ...history.map((msg: { role: string; content: string }) => ({
-                  role: msg.role === "user" ? "user" : "model",
-                  parts: [{ text: msg.content }],
-                })),
-              ],
-            });
-            usedModel = modelsToTry[0];
-            break;
-          } catch (retryErr: any) {
-            // Retry also failed, continue to error handling
-            console.error("Retry also failed:", retryErr.message);
-          }
-        }
-        continue;
-      }
-
-      // Other errors, throw
-      throw err;
-    }
-  }
-
-  if (!chat) {
-    // Try fallback APIs (SambaNova and Hugging Face)
-    const errorMsg = lastError?.message || "Unknown error";
-    const sambaNovaApiKey = process.env.SAMBANOVA_API_KEY;
-
-    // Try SambaNova first if API key is available
-    if (sambaNovaApiKey) {
-      console.log("All Gemini models failed. Trying SambaNova fallback for chat...");
-      try {
-        const response = await chatWithSambaNova(args.message, documentContext, history, sambaNovaApiKey);
-
-        // Save user message
-        await ctx.runMutation(internal.ai.saveChatMessage, {
-          sessionId: finalSessionId,
-          role: "user",
-          content: args.message,
-        });
-
-        // Save assistant message
-        await ctx.runMutation(internal.ai.saveChatMessage, {
-          sessionId: finalSessionId,
-          role: "assistant",
-          content: response,
-          model: "sambanova/meta-llama-3.1-8b-instruct",
-        });
-
-        // Update session timestamp
-        await ctx.runMutation(internal.ai.updateSessionTimestamp, {
-          sessionId: finalSessionId,
-        });
-
-        return {
-          sessionId: finalSessionId,
-          response: response,
-          model: "sambanova/meta-llama-3.1-8b-instruct",
-        };
-      } catch (snError: any) {
-        console.error("SambaNova chat fallback failed:", snError);
-        // Continue to Hugging Face fallback
-      }
-    }
-
-    // Try Hugging Face fallback
-    console.log("Trying Hugging Face fallback for chat...");
-    try {
-      const response = await chatWithHuggingFace(args.message, documentContext);
-
-      // Save user message
-      await ctx.runMutation(internal.ai.saveChatMessage, {
-        sessionId: finalSessionId,
-        role: "user",
-        content: args.message,
-      });
-
-      // Save assistant message
-      await ctx.runMutation(internal.ai.saveChatMessage, {
-        sessionId: finalSessionId,
-        role: "assistant",
-        content: response,
-        model: "huggingface/dialogpt",
-      });
-
-      // Update session timestamp
-      await ctx.runMutation(internal.ai.updateSessionTimestamp, {
-        sessionId: finalSessionId,
-      });
-
-      return {
-        sessionId: finalSessionId,
-        response: response,
-        model: "huggingface/dialogpt",
-      };
-    } catch (hfError: any) {
-      console.error("Hugging Face chat fallback also failed:", hfError);
-      // Continue to error message
-    }
-
-    // If all fallbacks failed, provide helpful error message
-    if (errorMsg.includes("404") || errorMsg.includes("not found")) {
-      throw new Error(`Không tìm thấy model Gemini nào khả dụng. Vui lòng kiểm tra API key và đảm bảo Generative AI API đã được bật. Đã thử các models: ${modelsToTry.join(", ")}`);
-    }
-    if (errorMsg.includes("429") || errorMsg.includes("quota")) {
-      throw new Error(`⚠️ Tất cả các models Gemini đã vượt quá quota miễn phí.\n\n💡 Giải pháp:\n1. Đợi 1-2 phút và thử lại (quota có thể được reset)\n2. Kiểm tra quota tại: https://aistudio.google.com/app/apikey\n3. Nâng cấp lên gói trả phí nếu cần sử dụng nhiều hơn\n\nĐã thử ${modelsToTry.length} models: ${modelsToTry.slice(0, 3).join(", ")}...`);
-    }
-    throw new Error(`Tất cả các models đều thất bại. Lỗi cuối: ${errorMsg.substring(0, 150)}...`);
-  }
-
-  // Save user message
-  await ctx.runMutation(internal.ai.saveChatMessage, {
-    sessionId: finalSessionId,
-    role: "user",
-    content: args.message,
-  });
-
-  try {
-    // Send message and get response with retry logic for 429 errors
-    let result: any = null;
-    let retryCount = 0;
-    const maxRetries = 2;
-
-    while (retryCount <= maxRetries) {
-      try {
-        result = await chat.sendMessage(args.message);
-        break;
-      } catch (retryError: any) {
-        if (retryError.status === 429 && retryCount < maxRetries) {
-          retryCount++;
-          const delayMs = 2000 * retryCount; // Exponential backoff: 2s, 4s
-          console.error(`Quota exceeded, retrying in ${delayMs}ms... (attempt ${retryCount}/${maxRetries})`);
-          await sleep(delayMs);
-          continue;
-        }
-        throw retryError;
-      }
-    }
-
-    if (!result) {
-      throw new Error("Failed to get response after retries");
-    }
-
-    const response = await result.response;
-    const text = response.text();
+  // Helper function to save messages
+  const saveMessages = async (userMsg: string, aiMsg: string, modelName: string) => {
+    // Save user message
+    await ctx.runMutation(internal.ai.saveChatMessage, {
+      sessionId: finalSessionId,
+      role: "user",
+      content: userMsg,
+    });
 
     // Save assistant message
     await ctx.runMutation(internal.ai.saveChatMessage, {
       sessionId: finalSessionId,
       role: "assistant",
-      content: text,
-      model: usedModel,
+      content: aiMsg,
+      model: modelName,
     });
 
     // Update session timestamp
     await ctx.runMutation(internal.ai.updateSessionTimestamp, {
       sessionId: finalSessionId,
     });
+  };
 
-    return {
-      sessionId: finalSessionId,
-      response: text,
-      model: usedModel,
-    };
-  } catch (error: any) {
-    console.error("Gemini chat sendMessage error:", error);
+  let response: string | null = null;
+  let usedModel = "";
 
-    // Try fallback APIs when sendMessage fails
-    const sambaNovaApiKey = process.env.SAMBANOVA_API_KEY;
-
-    // Try SambaNova fallback
-    if (sambaNovaApiKey) {
-      console.log("Gemini sendMessage failed. Trying SambaNova fallback...");
-      try {
-        const response = await chatWithSambaNova(args.message, documentContext, history, sambaNovaApiKey);
-
-        // Save assistant message (user message already saved)
-        await ctx.runMutation(internal.ai.saveChatMessage, {
-          sessionId: finalSessionId,
-          role: "assistant",
-          content: response,
-          model: "sambanova/meta-llama-3.1-8b-instruct",
-        });
-
-        // Update session timestamp
-        await ctx.runMutation(internal.ai.updateSessionTimestamp, {
-          sessionId: finalSessionId,
-        });
-
-        return {
-          sessionId: finalSessionId,
-          response: response,
-          model: "sambanova/meta-llama-3.1-8b-instruct",
-        };
-      } catch (snError: any) {
-        console.error("SambaNova fallback failed:", snError);
-        // Continue to Hugging Face fallback
-      }
-    }
-
-    // Try Hugging Face fallback
-    console.log("Trying Hugging Face fallback...");
+  // 1. Try SambaNova first
+  const sambaNovaApiKey = process.env.SAMBANOVA_API_KEY;
+  if (sambaNovaApiKey) {
     try {
-      const response = await chatWithHuggingFace(args.message, documentContext);
-
-      // Save assistant message (user message already saved)
-      await ctx.runMutation(internal.ai.saveChatMessage, {
-        sessionId: finalSessionId,
-        role: "assistant",
-        content: response,
-        model: "huggingface/dialogpt",
-      });
-
-      // Update session timestamp
-      await ctx.runMutation(internal.ai.updateSessionTimestamp, {
-        sessionId: finalSessionId,
-      });
-
-      return {
-        sessionId: finalSessionId,
-        response: response,
-        model: "huggingface/dialogpt",
-      };
-    } catch (hfError: any) {
-      console.error("Hugging Face fallback also failed:", hfError);
-      // Continue to error message
+      console.log("Using SambaNova for chat...");
+      response = await chatWithSambaNova(args.message, documentContext, history, sambaNovaApiKey);
+      usedModel = "sambanova/meta-llama-3.1-8b-instruct";
+    } catch (error: any) {
+      console.error("SambaNova chat failed:", error);
     }
-
-    // If all fallbacks failed, provide error message
-    console.error("Error details:", {
-      message: error.message,
-      status: error.status,
-      statusText: error.statusText,
-      code: error.code,
-    });
-
-    // Check for specific error types
-    if (error.message?.includes("quota") || error.message?.includes("429") || error.status === 429) {
-      throw new Error(`⚠️ Tất cả các models Gemini đã vượt quá quota miễn phí.\n\n💡 Giải pháp:\n1. Đợi 1-2 phút và thử lại (quota có thể được reset)\n2. Kiểm tra quota tại: https://aistudio.google.com/app/apikey\n3. Nâng cấp lên gói trả phí nếu cần sử dụng nhiều hơn`);
-    }
-
-    if (error.message?.includes("API_KEY_INVALID") || error.message?.includes("401") || error.status === 401) {
-      throw new Error("API key không hợp lệ. Vui lòng kiểm tra cấu hình GEMINI_API_KEY.");
-    }
-
-    if (error.message?.includes("403") || error.status === 403) {
-      throw new Error("Không có quyền truy cập API. Vui lòng kiểm tra quyền của API key.");
-    }
-
-    // Return more detailed error message
-    const errorMessage = error.message || "Unknown error";
-    throw new Error(`Không thể lấy phản hồi: ${errorMessage.substring(0, 150)}... Vui lòng kiểm tra API key và quota.`);
+  } else {
+    console.log("SAMBANOVA_API_KEY not found, skipping...");
   }
+
+  // 2. Fallback to Hugging Face
+  if (!response) {
+    console.log("Trying Hugging Face fallback for chat...");
+    try {
+      response = await chatWithHuggingFace(args.message, documentContext);
+      usedModel = "huggingface/dialogpt";
+    } catch (error: any) {
+      console.error("Hugging Face chat failed:", error);
+      throw new Error("Không thể trả lời câu hỏi. Cả SambaNova và Hugging Face đều gặp lỗi. Vui lòng thử lại sau.");
+    }
+  }
+
+  // Save conversation
+  await saveMessages(args.message, response!, usedModel);
+
+  return {
+    sessionId: finalSessionId,
+    response: response!,
+    model: usedModel,
+  };
 };
 
 export const chatWithAI = action({
