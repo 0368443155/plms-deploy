@@ -8,7 +8,7 @@
 - **Actor:** User (Authenticated)
 - **Precondition:** User đã đăng nhập
 - **Postcondition:** Lịch học được tạo/cập nhật/xóa thành công
-- **Trạng thái:** ❌ Chưa triển khai
+- **Trạng thái:** ✅ Đã triển khai
 - **Ưu tiên:** 🔴 CAO
 - **Thời gian ước tính:** 1 tuần
 - **Dependencies:** 
@@ -755,34 +755,34 @@ export const AddScheduleModal = ({ open, onClose, defaultValues }: AddScheduleMo
 **TC01: Create Schedule**
 - Input: Valid schedule data
 - Expected: Schedule created successfully
-- Actual: ⏳ Pending
+- Actual: ✅ Pass
 
 **TC02: Conflict Detection**
 - Input: Overlapping schedule
 - Expected: Error "Schedule conflict"
-- Actual: ⏳ Pending
+- Actual: ✅ Pass
 
 **TC03: Update Schedule**
 - Input: Modified schedule data
 - Expected: Schedule updated
-- Actual: ⏳ Pending
+- Actual: ✅ Pass
 
 **TC04: Delete Schedule**
 - Input: scheduleId
 - Expected: Schedule deleted
-- Actual: ⏳ Pending
+- Actual: ✅ Pass
 
 ### Non-functional Tests:
 
 **Performance:**
 - Load 50 schedules: < 500ms
 - Create schedule: < 200ms
-- Actual: ⏳ Pending
+- Actual: ✅ Pass
 
 **Usability:**
 - Grid view: Easy to read
 - Click to add: Intuitive
-- Actual: ⏳ Pending
+- Actual: ✅ Pass
 
 ---
 

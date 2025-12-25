@@ -1,15 +1,14 @@
 import { v } from "convex/values";
 import { action, internalMutation, internalQuery, mutation, query } from "./_generated/server";
-import { internal, api } from "./_generated/api";
-
+import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
 // ========================================
-// HELPER FUNCTIONS
+// CÁC HÀM HỖ TRỢ (HELPER FUNCTIONS)
 // ========================================
 
 /**
- * Extract plain text from BlockNote JSON content
+ * Trích xuất văn bản thuần túy từ nội dung BlockNote JSON
  */
 function extractPlainText(content: string | undefined): string {
   if (!content) return "";
@@ -37,10 +36,10 @@ function extractPlainText(content: string | undefined): string {
 }
 
 /**
- * Hash content using SHA-256
+ * Hash nội dung sử dụng thuật toán đơn giản (để tạo key cache)
  */
 function hashContent(content: string): string {
-  // Simple hash function (Convex doesn't have crypto module)
+  // Hàm hash đơn giản vì Convex không có sẵn crypto module mạnh
   let hash = 0;
   for (let i = 0; i < content.length; i++) {
     const char = content.charCodeAt(i);
@@ -51,15 +50,15 @@ function hashContent(content: string): string {
 }
 
 /**
- * Fallback to SambaNova API (has $5 free credit)
- * Tries multiple endpoints and formats
+ * Sử dụng SambaNova API (có $5 free credit)
+ * Thử nhiều endpoint và format khác nhau
  */
 async function summarizeWithSambaNova(text: string, apiKey: string): Promise<string> {
-  // Increase limit to capture more content (up to ~8000 chars for better coverage)
+  // Giới hạn độ dài text để tránh lỗi (khoảng ~8000 ký tự là ổn)
   const maxChars = Math.min(text.length, 8000);
   const prompt = `Hãy tóm tắt TOÀN BỘ nội dung sau một cách ngắn gọn và súc tích. Nếu có nhiều chương/phần, hãy tóm tắt TẤT CẢ các phần:\n\n${text.substring(0, maxChars)}${text.length > maxChars ? '\n\n[...nội dung tiếp theo...]' : ''}`;
 
-  // Try different SambaNova API endpoints and formats
+  // Thử các endpoint khác nhau của SambaNova API
   const endpointsToTry = [
     {
       url: "https://api.sambanova.ai/v1/chat/completions",
@@ -75,7 +74,7 @@ async function summarizeWithSambaNova(text: string, apiKey: string): Promise<str
             content: prompt
           }
         ],
-        max_tokens: 500,  // Increase to allow longer summaries
+        max_tokens: 500,  // Tăng lên để tóm tắt dài hơn
         temperature: 0.7,
       },
       extractResult: (data: any) => {
@@ -88,7 +87,7 @@ async function summarizeWithSambaNova(text: string, apiKey: string): Promise<str
       body: {
         model: "Meta-Llama-3.1-8B-Instruct",
         prompt: prompt,
-        max_tokens: 500,  // Increase to allow longer summaries
+        max_tokens: 500,
         temperature: 0.7,
       },
       extractResult: (data: any) => {
@@ -101,7 +100,7 @@ async function summarizeWithSambaNova(text: string, apiKey: string): Promise<str
       body: {
         model: "Meta-Llama-3.1-8B-Instruct",
         prompt: prompt,
-        max_tokens: 500,  // Increase to allow longer summaries
+        max_tokens: 500,
         temperature: 0.7,
       },
       extractResult: (data: any) => {
@@ -128,31 +127,31 @@ async function summarizeWithSambaNova(text: string, apiKey: string): Promise<str
         const data = await response.json();
         const result = endpoint.extractResult(data);
         if (result) {
-          console.log(`Successfully used SambaNova endpoint: ${endpoint.url}`);
+          console.log(`Đã dùng thành công endpoint: ${endpoint.url}`);
           return result;
         }
       } else {
-        console.log(`SambaNova endpoint ${endpoint.url} failed with status ${response.status}, trying next...`);
-        // Continue to next endpoint
+        console.log(`Endpoint ${endpoint.url} thất bại với mã ${response.status}, đang thử cái tiếp theo...`);
+        // Thử cái tiếp theo
       }
     } catch (error: any) {
-      console.error(`Error with SambaNova endpoint ${endpoint.url}:`, error.message);
-      // Continue to next endpoint
+      console.error(`Lỗi với endpoint ${endpoint.url}:`, error.message);
+      // Thử cái tiếp theo
       continue;
     }
   }
 
-  throw new Error("All SambaNova endpoints failed");
+  throw new Error("Tất cả các endpoint của SambaNova đều thất bại");
 }
 
 /**
- * Fallback to Hugging Face Inference API (free tier, no API key required)
- * Tries multiple models with retry logic
+ * Fallback sang Hugging Face Inference API (miễn phí, không cần key xịn)
+ * Thử nhiều model khác nhau nếu cái này lỗi thì qua cái kia
  */
 async function summarizeWithHuggingFace(text: string): Promise<string> {
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // List of free Hugging Face models to try (no API key needed)
+  // Danh sách các model miễn phí của Hugging Face
   const modelsToTry = [
     {
       url: "https://api-inference.huggingface.co/models/facebook/bart-large-cnn",
@@ -185,7 +184,7 @@ async function summarizeWithHuggingFace(text: string): Promise<string> {
 
   for (const model of modelsToTry) {
     try {
-      // Try the model
+      // Gọi API
       let response = await fetch(model.url, {
         method: "POST",
         headers: {
@@ -196,14 +195,14 @@ async function summarizeWithHuggingFace(text: string): Promise<string> {
         }),
       });
 
-      // If model is loading (503), wait and retry
+      // Nếu model đang loading (503), đợi một chút rồi thử lại
       if (response.status === 503) {
         const retryAfter = response.headers.get("retry-after");
-        const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 10000; // Default 10 seconds
-        console.log(`Model ${model.url} is loading, waiting ${waitTime}ms...`);
-        await sleep(Math.min(waitTime, 20000)); // Max 20 seconds
+        const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 10000; // Mặc định 10s
+        console.log(`Model ${model.url} đang loading, đợi ${waitTime}ms...`);
+        await sleep(Math.min(waitTime, 20000)); // Đợi tối đa 20s
 
-        // Retry once
+        // Thử lại một lần nữa
         response = await fetch(model.url, {
           method: "POST",
           headers: {
@@ -219,34 +218,34 @@ async function summarizeWithHuggingFace(text: string): Promise<string> {
         const data = await response.json();
         const result = model.extractResult(data);
         if (result) {
-          console.log(`Successfully used Hugging Face model: ${model.url}`);
+          console.log(`Dùng thành công model Hugging Face: ${model.url}`);
           return result;
         }
       } else if (response.status !== 503) {
-        // If not 503, try next model
-        console.log(`Model ${model.url} failed with status ${response.status}, trying next...`);
+        // Nếu không phải lỗi 503, thử model khác
+        console.log(`Model ${model.url} lỗi ${response.status}, thử model tiếp theo...`);
         continue;
       }
     } catch (error: any) {
-      console.error(`Error with model ${model.url}:`, error.message);
-      // Try next model
+      console.error(`Lỗi với model ${model.url}:`, error.message);
+      // Thử model khác
       continue;
     }
   }
 
-  // If all models failed, create a simple summary from first sentences
-  console.log("All Hugging Face models failed, creating simple summary...");
+  // Nếu tất cả đều thất bại, tạo tóm tắt đơn giản bằng cách lấy vài câu đầu
+  console.log("Tất cả Hugging Face models đều tạch, tạo tóm tắt đơn giản...");
   const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
   if (sentences.length > 0) {
     const simpleSummary = sentences.slice(0, 3).join(". ") + ".";
     return simpleSummary;
   }
 
-  throw new Error("All Hugging Face models failed and unable to create simple summary");
+  throw new Error("Không thể tạo tóm tắt từ bất kỳ nguồn nào");
 }
 
 /**
- * Chat with SambaNova API (for chat functionality)
+ * Chat với SambaNova API (tính năng chat chính)
  */
 async function chatWithSambaNova(
   message: string,
@@ -254,10 +253,10 @@ async function chatWithSambaNova(
   history: Array<{ role: string; content: string }>,
   apiKey: string
 ): Promise<string> {
-  // Build conversation context
+  // Tạo context cho cuộc hội thoại
   const systemPrompt = `Bạn là một trợ lý AI chuyên trả lời câu hỏi dựa trên nội dung tài liệu. Hãy trả lời câu hỏi một cách chính xác và hữu ích dựa trên nội dung tài liệu sau:\n\n${documentContext.substring(0, 2000)}`;
 
-  // Build messages array
+  // Xây dựng mảng tin nhắn
   const messages = [
     { role: "system", content: systemPrompt },
     ...history.slice(-5).map(msg => ({
@@ -311,31 +310,31 @@ async function chatWithSambaNova(
         const data = await response.json();
         const result = endpoint.extractResult(data);
         if (result) {
-          console.log(`Successfully used SambaNova for chat: ${endpoint.url}`);
+          console.log(`Dùng thành công SambaNova endpoint chat: ${endpoint.url}`);
           return result;
         }
       }
     } catch (error: any) {
-      console.error(`Error with SambaNova chat endpoint ${endpoint.url}:`, error.message);
+      console.error(`Lỗi với SambaNova chat endpoint ${endpoint.url}:`, error.message);
       continue;
     }
   }
 
-  throw new Error("All SambaNova chat endpoints failed");
+  throw new Error("Tất cả các endpoint chat của SambaNova đều thất bại");
 }
 
 /**
- * Chat with Hugging Face (simple fallback for chat)
+ * Chat với Hugging Face (phương án dự phòng đơn giản)
  */
 async function chatWithHuggingFace(
   message: string,
   documentContext: string
 ): Promise<string> {
-  // Use a simple Q&A model from Hugging Face
+  // Dùng model Q&A đơn giản từ Hugging Face
   const prompt = `Dựa trên nội dung sau, trả lời câu hỏi:\n\nNội dung: ${documentContext.substring(0, 1000)}\n\nCâu hỏi: ${message}\n\nTrả lời:`;
 
   try {
-    // Try using a conversational model
+    // Thử dùng một model hội thoại
     const response = await fetch("https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium", {
       method: "POST",
       headers: {
@@ -357,19 +356,19 @@ async function chatWithHuggingFace(
       }
     }
   } catch (error: any) {
-    console.error("Hugging Face chat error:", error);
+    console.error("Hugging Face chat lỗi:", error);
   }
 
-  // Fallback: return a simple response
+  // Fallback: trả về tin nhắn đơn giản nếu không gọi được API
   return `Dựa trên nội dung tài liệu, tôi có thể giúp bạn trả lời câu hỏi: "${message}". Tuy nhiên, tính năng chat nâng cao đang tạm thời không khả dụng. Vui lòng thử lại sau hoặc sử dụng tính năng tóm tắt tài liệu.`;
 }
 
 // ========================================
-// UC18: AI SUMMARY
+// UC18: TÓM TẮT AI (AI SUMMARY)
 // ========================================
 
 /**
- * Summarize a document using Gemini AI
+ * Handler tóm tắt tài liệu
  */
 const summarizeDocumentHandler = async (
   ctx: any,
@@ -377,31 +376,32 @@ const summarizeDocumentHandler = async (
 ): Promise<{ summary: string; fromCache: boolean; model: string }> => {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
-    throw new Error("Not authenticated");
+    throw new Error("Chưa đăng nhập");
   }
 
   const userId = identity.subject;
 
-  // Get document
+  // Lấy document
   const document = await ctx.runQuery(internal.documents.getByIdInternal, {
     documentId: args.documentId,
   });
 
   if (!document || document.userId !== userId) {
-    throw new Error("Unauthorized");
+    throw new Error("Không có quyền truy cập");
   }
 
-  // Extract plain text from BlockNote content
+  // Lấy text thuần từ nội dung
   const plainText = extractPlainText(document.content);
 
+  // Kiểm tra độ dài
   if (!plainText || plainText.length < 100) {
-    throw new Error("Content too short to summarize (minimum 100 characters)");
+    throw new Error("Nội dung quá ngắn để tóm tắt (cần tối thiểu 100 ký tự)");
   }
 
-  // Calculate content hash
+  // Tạo hash để cache
   const contentHash = hashContent(plainText);
 
-  // If forcing regeneration, delete old cache first
+  // Nếu user yêu cầu tạo lại, xóa cache cũ đi
   if (args.forceRegenerate) {
     try {
       const oldSummaries = await ctx.runQuery(internal.ai.getAllSummariesForDocument, {
@@ -413,14 +413,14 @@ const summarizeDocumentHandler = async (
           summaryId: oldSummary._id,
         });
       }
-      console.log(`Deleted ${oldSummaries.length} old summaries for force regeneration`);
+      console.log(`Đã xóa ${oldSummaries.length} bản tóm tắt cũ`);
     } catch (error) {
-      console.error("Error deleting old summaries:", error);
-      // Continue anyway
+      console.error("Lỗi khi xóa tóm tắt cũ:", error);
+      // Kệ nó, chạy tiếp
     }
   }
 
-  // Check cache if not forcing regeneration
+  // Kiểm tra cache nếu không buộc tạo lại
   if (!args.forceRegenerate) {
     const cached: {
       summary: string;
@@ -443,34 +443,34 @@ const summarizeDocumentHandler = async (
   let summary: string | null = null;
   let usedModel = "";
 
-  // 1. Try SambaNova first
+  // 1. Thử SambaNova trước (ngon bổ rẻ)
   const sambaNovaApiKey = process.env.SAMBANOVA_API_KEY;
   if (sambaNovaApiKey) {
     try {
-      console.log("Using SambaNova for summary...");
+      console.log("Đang dùng SambaNova để tóm tắt...");
       summary = await summarizeWithSambaNova(plainText, sambaNovaApiKey);
       usedModel = "sambanova/meta-llama-3.1-8b-instruct";
     } catch (error: any) {
-      console.error("SambaNova summary failed:", error);
+      console.error("SambaNova lỗi rồi:", error);
     }
   } else {
-    console.log("SAMBANOVA_API_KEY not found, skipping...");
+    console.log("Không tìm thấy SAMBANOVA_API_KEY, bỏ qua...");
   }
 
-  // 2. Fallback to Hugging Face
+  // 2. Nếu tạch thì qua Hugging Face
   if (!summary) {
-    console.log("Trying Hugging Face fallback for summary...");
+    console.log("Chuyển sang Hugging Face fallback...");
     try {
       summary = await summarizeWithHuggingFace(plainText);
       usedModel = "huggingface/facebook-bart-large-cnn";
     } catch (error: any) {
-      console.error("Hugging Face summary failed:", error);
-      throw new Error("Không thể tạo tóm tắt. Cả SambaNova và Hugging Face đều gặp lỗi. Vui lòng thử lại sau.");
+      console.error("Hugging Face cũng lỗi nốt:", error);
+      throw new Error("Không thể tạo tóm tắt. Cả 2 hệ thống AI đều đang bận hoặc lỗi. Thử lại sau nhé.");
     }
   }
 
   try {
-    // Cache the result
+    // Lưu vào cache để lần sau đỡ tốn tiền/thời gian
     await ctx.runMutation(internal.ai.cacheSummary, {
       documentId: args.documentId,
       userId,
@@ -485,8 +485,8 @@ const summarizeDocumentHandler = async (
       model: usedModel,
     };
   } catch (error: any) {
-    console.error("Error caching summary:", error);
-    // Return result even if caching failed
+    console.error("Lỗi khi lưu cache:", error);
+    // Vẫn trả về kết quả cho user dù không lưu được cache
     return {
       summary: summary!,
       fromCache: false,
@@ -612,11 +612,11 @@ export const deleteSummary = internalMutation({
 
 
 // ========================================
-// UC19: AI CHAT
+// UC19: AI CHAT (CHAT VỚI TÀI LIỆU)
 // ========================================
 
 /**
- * Chat with AI about a document
+ * Handler chat với tài liệu
  */
 const chatWithAIHandler = async (
   ctx: any,
@@ -624,21 +624,21 @@ const chatWithAIHandler = async (
 ): Promise<{ sessionId: Id<"chatSessions">; response: string; model: string }> => {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) {
-    throw new Error("Not authenticated");
+    throw new Error("Chưa đăng nhập");
   }
 
   const userId = identity.subject;
 
-  // Get document
+  // Lấy tài liệu
   const document = await ctx.runQuery(internal.documents.getByIdInternal, {
     documentId: args.documentId,
   });
 
   if (!document || document.userId !== userId) {
-    throw new Error("Unauthorized");
+    throw new Error("Không có quyền truy cập");
   }
 
-  // Get or create session
+  // Lấy hoặc tạo session mới
   let sessionId: Id<"chatSessions"> | undefined = args.sessionId;
   if (!sessionId) {
     sessionId = await ctx.runMutation(internal.ai.createChatSession, {
@@ -647,32 +647,31 @@ const chatWithAIHandler = async (
     });
   }
 
-  // Ensure sessionId is defined
+  // Chắc chắn là có session ID
   if (!sessionId) {
-    throw new Error("Failed to create chat session");
+    throw new Error("Không thể tạo phiên chat");
   }
 
-  // Now sessionId is guaranteed to be defined
   const finalSessionId: Id<"chatSessions"> = sessionId;
 
-  // Get conversation history
+  // Lấy lịch sử chat
   const history = await ctx.runQuery(internal.ai.getChatHistory, {
     sessionId: finalSessionId,
   });
 
-  // Extract document content as context
+  // Lấy nội dung tài liệu làm context
   const documentContext = extractPlainText(document.content);
 
-  // Helper function to save messages
+  // Hàm hỗ trợ lưu tin nhắn
   const saveMessages = async (userMsg: string, aiMsg: string, modelName: string) => {
-    // Save user message
+    // Lưu tin nhắn user
     await ctx.runMutation(internal.ai.saveChatMessage, {
       sessionId: finalSessionId,
       role: "user",
       content: userMsg,
     });
 
-    // Save assistant message
+    // Lưu tin nhắn AI
     await ctx.runMutation(internal.ai.saveChatMessage, {
       sessionId: finalSessionId,
       role: "assistant",
@@ -680,7 +679,7 @@ const chatWithAIHandler = async (
       model: modelName,
     });
 
-    // Update session timestamp
+    // Cập nhật thời gian update của session
     await ctx.runMutation(internal.ai.updateSessionTimestamp, {
       sessionId: finalSessionId,
     });
@@ -689,33 +688,33 @@ const chatWithAIHandler = async (
   let response: string | null = null;
   let usedModel = "";
 
-  // 1. Try SambaNova first
+  // 1. Dùng SambaNova trước
   const sambaNovaApiKey = process.env.SAMBANOVA_API_KEY;
   if (sambaNovaApiKey) {
     try {
-      console.log("Using SambaNova for chat...");
+      console.log("Đang chat bằng SambaNova...");
       response = await chatWithSambaNova(args.message, documentContext, history, sambaNovaApiKey);
       usedModel = "sambanova/meta-llama-3.1-8b-instruct";
     } catch (error: any) {
-      console.error("SambaNova chat failed:", error);
+      console.error("SambaNova chat lỗi:", error);
     }
   } else {
-    console.log("SAMBANOVA_API_KEY not found, skipping...");
+    console.log("Không có SAMBANOVA_API_KEY, bỏ qua...");
   }
 
-  // 2. Fallback to Hugging Face
+  // 2. Chuyển sang Hugging Face nếu cần
   if (!response) {
-    console.log("Trying Hugging Face fallback for chat...");
+    console.log("Chuyển sang Hugging Face fallback...");
     try {
       response = await chatWithHuggingFace(args.message, documentContext);
       usedModel = "huggingface/dialogpt";
     } catch (error: any) {
-      console.error("Hugging Face chat failed:", error);
-      throw new Error("Không thể trả lời câu hỏi. Cả SambaNova và Hugging Face đều gặp lỗi. Vui lòng thử lại sau.");
+      console.error("Hugging Face chat cũng lỗi:", error);
+      throw new Error("Không thể trả lời câu hỏi. Cả 2 hệ thống AI đều đang gặp vấn đề. Thử lại sau nhé.");
     }
   }
 
-  // Save conversation
+  // Lưu hội thoại
   await saveMessages(args.message, response!, usedModel);
 
   return {

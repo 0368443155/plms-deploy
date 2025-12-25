@@ -8,7 +8,7 @@
 - **Actor:** User (Authenticated)
 - **Precondition:** User đã đăng nhập
 - **Postcondition:** Calendar hiển thị tất cả schedules và events
-- **Trạng thái:** ❌ Chưa triển khai
+- **Trạng thái:** ✅ Đã triển khai
 - **Ưu tiên:** 🔴 CAO
 - **Thời gian ước tính:** 1.5 tuần
 - **Dependencies:** 
@@ -789,17 +789,17 @@ export const EventModal = ({ open, onClose, event, defaultValues }: EventModalPr
 **TC01: Create Event**
 - Input: Valid event data
 - Expected: Event created successfully
-- Actual: ⏳ Pending
+- Actual: ✅ Pass
 
 **TC02: View Calendar**
 - Input: Date range
 - Expected: Shows schedules + events
-- Actual: ⏳ Pending
+- Actual: ✅ Pass
 
 **TC03: Switch View**
 - Input: Month/Week toggle
 - Expected: View changes
-- Actual: ⏳ Pending
+- Actual: ✅ Pass
 
 ---
 
