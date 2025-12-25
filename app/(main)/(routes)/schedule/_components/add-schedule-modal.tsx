@@ -103,11 +103,6 @@ export const AddScheduleModal = ({
       return;
     }
 
-    if (subjectName.length > 100) {
-      toast.error("Tên môn học không được vượt quá 100 ký tự");
-      return;
-    }
-
     if (startTime >= endTime) {
       toast.error("Thời gian kết thúc phải sau thời gian bắt đầu");
       return;
@@ -178,14 +173,8 @@ export const AddScheduleModal = ({
               value={subjectName}
               onChange={(e) => setSubjectName(e.target.value)}
               placeholder="Ví dụ: Toán cao cấp"
-              maxLength={100}
               required
             />
-            {subjectName.length > 80 && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {subjectName.length}/100 ký tự
-              </p>
-            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -101,10 +101,6 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(0.5);
 }
 
-input[type="time"]::-webkit-datetime-edit-ampm-field {
-  display: none;
-}
-
 input[type="time"] {
   -webkit-appearance: textfield;
   -moz-appearance: textfield;
