@@ -54,9 +54,8 @@ function hashContent(content: string): string {
  * Thử nhiều endpoint và format khác nhau
  */
 async function summarizeWithSambaNova(text: string, apiKey: string): Promise<string> {
-  // Giới hạn độ dài text để tránh lỗi (khoảng ~8000 ký tự là ổn)
-  const maxChars = Math.min(text.length, 8000);
-  const prompt = `Hãy tóm tắt TOÀN BỘ nội dung sau một cách ngắn gọn và súc tích. Nếu có nhiều chương/phần, hãy tóm tắt TẤT CẢ các phần:\n\n${text.substring(0, maxChars)}${text.length > maxChars ? '\n\n[...nội dung tiếp theo...]' : ''}`;
+  // Sử dụng toàn bộ nội dung văn bản, không giới hạn ký tự (Llama 3.1 hỗ trợ context window lớn)
+  const prompt = `Hãy tóm tắt TOÀN BỘ nội dung sau một cách ngắn gọn và súc tích. Nếu có nhiều chương/phần, hãy tóm tắt TẤT CẢ các phần:\n\n${text}`;
 
   // Thử các endpoint khác nhau của SambaNova API
   const endpointsToTry = [
@@ -74,7 +73,7 @@ async function summarizeWithSambaNova(text: string, apiKey: string): Promise<str
             content: prompt
           }
         ],
-        max_tokens: 500,  // Tăng lên để tóm tắt dài hơn
+        max_tokens: 1000,  // Tăng max_tokens để cho phép output dài hơn nếu input dài
         temperature: 0.7,
       },
       extractResult: (data: any) => {
@@ -87,7 +86,7 @@ async function summarizeWithSambaNova(text: string, apiKey: string): Promise<str
       body: {
         model: "Meta-Llama-3.1-8B-Instruct",
         prompt: prompt,
-        max_tokens: 500,
+        max_tokens: 1000,
         temperature: 0.7,
       },
       extractResult: (data: any) => {
@@ -100,7 +99,7 @@ async function summarizeWithSambaNova(text: string, apiKey: string): Promise<str
       body: {
         model: "Meta-Llama-3.1-8B-Instruct",
         prompt: prompt,
-        max_tokens: 500,
+        max_tokens: 1000,
         temperature: 0.7,
       },
       extractResult: (data: any) => {
@@ -253,8 +252,8 @@ async function chatWithSambaNova(
   history: Array<{ role: string; content: string }>,
   apiKey: string
 ): Promise<string> {
-  // Tạo context cho cuộc hội thoại
-  const systemPrompt = `Bạn là một trợ lý AI chuyên trả lời câu hỏi dựa trên nội dung tài liệu. Hãy trả lời câu hỏi một cách chính xác và hữu ích dựa trên nội dung tài liệu sau:\n\n${documentContext.substring(0, 2000)}`;
+  // Tạo context cho cuộc hội thoại - Sử dụng toàn bộ nội dung vì Llama 3.1 8B Instruct có context window lớn
+  const systemPrompt = `Bạn là một trợ lý AI chuyên trả lời câu hỏi dựa trên nội dung tài liệu. Hãy trả lời câu hỏi một cách chính xác và hữu ích dựa trên nội dung tài liệu sau:\n\n${documentContext}`;
 
   // Xây dựng mảng tin nhắn
   const messages = [

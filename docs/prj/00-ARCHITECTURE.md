@@ -94,7 +94,7 @@ PLMS (Personal Learning Management System) là một ứng dụng web giống No
 │  │                    AI Providers                            │   │
 │  │  ┌──────────┐  ┌──────────┐  ┌──────────────┐           │   │
 │  │  │  Gemini  │  │SambaNova │  │ Hugging Face │           │   │
-│  │  │ (Primary)│  │(Fallback)│  │  (Fallback)  │           │   │
+│  │  │ (Primary)│  │(Primary) │  │  (Fallback)  │           │   │
 │  │  └──────────┘  └──────────┘  └──────────────────┘       │   │
 │  └──────────────────────────────────────────────────────────┘   │
 └──────────────────────────────────────────────────────────────────┘
@@ -162,31 +162,7 @@ PLMS (Personal Learning Management System) là một ứng dụng web giống No
 ```
 notion-clone-nextjs/
 ├── app/                          # Next.js App Router
-│   ├── (main)/                   # Authenticated routes
-│   │   ├── (routes)/
-│   │   │   ├── calendar/         # UC16: Calendar view
-│   │   │   ├── documents/        # UC07-UC13: Documents
-│   │   │   ├── notifications/    # UC17: Notifications
-│   │   │   ├── schedule/         # UC15: Schedule management
-│   │   │   ├── tables/           # UC14: Tables
-│   │   │   └── user-profile/     # UC05: Profile
-│   │   ├── _components/          # Main layout components
-│   │   └── layout.tsx            # Authenticated layout
-│   ├── (marketing)/              # Public marketing pages
-│   ├── (public)/                 # Public document preview
-│   ├── api/                      # API routes (EdgeStore)
-│   ├── globals.css               # Global styles
-│   └── layout.tsx                # Root layout
-│
 ├── components/                   # Shared components
-│   ├── ai/                       # UC18-19: AI components
-│   ├── modals/                   # Modal dialogs
-│   ├── providers/                # Context providers
-│   ├── ui/                       # UI primitives (shadcn)
-│   ├── editor.tsx                # BlockNote editor
-│   ├── toolbar.tsx               # Document toolbar
-│   └── ...
-│
 ├── convex/                       # Backend (Convex)
 │   ├── _generated/               # Auto-generated types
 │   ├── schema.ts                 # Database schema
@@ -197,10 +173,6 @@ notion-clone-nextjs/
 │   ├── notifications.ts          # UC17 APIs
 │   ├── ai.ts                     # UC18-19 APIs
 │   └── crons.ts                  # Scheduled jobs
-│
-├── hooks/                        # Custom React hooks
-├── lib/                          # Utility functions
-└── public/                       # Static assets
 ```
 
 ---
@@ -250,25 +222,6 @@ notion-clone-nextjs/
                         └───────────────┘       └───────────────┘
 ```
 
-### 6.2 Schema Definition (convex/schema.ts)
-
-```typescript
-// Ví dụ: documents table
-documents: defineTable({
-  title: v.string(),              // Tiêu đề trang
-  userId: v.string(),             // Clerk user ID
-  isArchived: v.boolean(),        // Soft delete flag
-  parentDocument: v.optional(v.id("documents")), // Parent reference
-  content: v.optional(v.string()),    // BlockNote JSON content
-  coverImage: v.optional(v.string()), // Cover image URL
-  icon: v.optional(v.string()),       // Emoji icon
-  isPublished: v.boolean(),       // Public visibility
-})
-  .index("by_user", ["userId"])   // Index for user's documents
-  .index("by_user_parent", ["userId", "parentDocument"])
-  .index("by_user_archived", ["userId", "isArchived"])
-```
-
 ---
 
 ## 7. Authentication Flow
@@ -314,60 +267,11 @@ documents: defineTable({
      │   Render UI   │               │               │
 ```
 
-### 7.2 Auth trong Convex
-
-```typescript
-// Mọi handler đều kiểm tra authentication
-handler: async (ctx, args) => {
-  // 1. Lấy identity từ Clerk JWT
-  const identity = await ctx.auth.getUserIdentity();
-  
-  // 2. Kiểm tra đã đăng nhập
-  if (!identity) {
-    throw new Error("Not authenticated");
-  }
-  
-  // 3. Lấy userId từ identity
-  const userId = identity.subject; // Clerk user ID
-  
-  // 4. Tiếp tục xử lý với userId
-  // ...
-}
-```
-
 ---
 
 ## 8. API Architecture
 
-### 8.1 Convex API Types
-
-| Type | Mô tả | Use case |
-|------|-------|----------|
-| `query` | Đọc data, realtime updates | `getById`, `getAll`, `search` |
-| `mutation` | Ghi data, CRUD operations | `create`, `update`, `delete` |
-| `action` | Side effects, external APIs | `summarizeDocument`, `chatWithAI` |
-| `internalQuery` | Query nội bộ (không expose) | `getCachedSummary` |
-| `internalMutation` | Mutation nội bộ | `cacheSummary`, `create notifications` |
-
-### 8.2 API Naming Convention
-
-```
-convex/
-├── documents.ts
-│   ├── create         # POST-like: Tạo mới
-│   ├── getById        # GET by ID
-│   ├── getSidebar     # GET list for sidebar
-│   ├── getSearch      # GET search results
-│   ├── getTrash       # GET archived items
-│   ├── update         # PATCH: Cập nhật
-│   ├── archive        # PATCH: Soft delete
-│   ├── restore        # PATCH: Khôi phục
-│   ├── remove         # DELETE: Xóa vĩnh viễn
-│   ├── removeIcon     # PATCH: Xóa icon
-│   └── removeCoverImage # PATCH: Xóa cover
-```
-
-### 8.3 Gọi API từ Frontend
+### 8.1 API Calling Patterns
 
 ```typescript
 // 1. Query (realtime subscription)
@@ -380,18 +284,7 @@ const update = useMutation(api.documents.update);
 await update({ id: docId, title: "New Title" });
 
 // 3. Action (với loading state)
-const [isLoading, setIsLoading] = useState(false);
-const summarize = useAction(api.ai.summarizeDocument);
-
-const handleSummarize = async () => {
-  setIsLoading(true);
-  try {
-    const result = await summarize({ documentId });
-    // Handle result
-  } finally {
-    setIsLoading(false);
-  }
-};
+const summarized = useAction(api.ai.summarize);
 ```
 
 ---
@@ -407,4 +300,4 @@ const handleSummarize = async () => {
 
 ---
 
-*Cập nhật lần cuối: 16/12/2024*
+*Cập nhật lần cuối: 26/12/2024*
